@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SGLAA - Laboratorio de Asfalto</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08111A;--surf:#0F1C28;--card:#132030;--bord:#1A2E42;
+  --acc:#F0A020;--grn:#27AE60;--grnb:#0A2A18;
+  --red:#E74C3C;--redb:#2A0A0A;--blu:#2980B9;--blub:#081828;
+  --mut:#4A6882;--txt:#C8DCF0;--dim:#7A9AB8
+}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;font-size:13px;min-height:100vh}
+input,select,textarea{background:var(--surf);color:var(--txt);border:1px solid var(--bord);border-radius:4px;padding:6px 8px;width:100%;font-size:12px;font-family:monospace;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+select option{background:var(--surf)}
+label{font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px}
+button{cursor:pointer;font-family:system-ui,sans-serif;font-weight:700;border:none;border-radius:4px;padding:8px 16px;font-size:13px;transition:filter .15s}
+button:hover:not(:disabled){filter:brightness(1.12)}
+button:disabled{opacity:.5;cursor:not-allowed}
+table{border-collapse:collapse;width:100%}
+th{background:var(--surf);color:var(--mut);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:5px 7px;text-align:left;border-bottom:1px solid var(--bord);white-space:nowrap}
+td{padding:5px 7px;border-bottom:1px solid #1A2E4220;font-size:11px;font-family:monospace}
+tr:hover td{background:#0F1C2820}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:14px}
+.sec-title{font-size:10px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+.acc{color:var(--acc)!important}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.field{margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.conf{background:var(--grnb);color:var(--grn)}
+.nconf{background:var(--redb);color:var(--red)}
+.pend{background:#181808;color:var(--acc)}
+.result-val{font-family:monospace;font-size:14px;font-weight:700}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bord);border-radius:3px}
+/* NAV */
+#header{background:var(--surf);border-bottom:2px solid #F0A02030;padding:10px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+#header .logo{background:var(--acc);width:34px;height:34px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--bg);flex-shrink:0}
+#nav{background:var(--surf);border-bottom:1px solid var(--bord);display:flex;overflow-x:auto;position:sticky;top:53px;z-index:90}
+.nav-btn{flex:0 0 auto;min-width:90px;padding:8px 6px;background:transparent;color:var(--mut);border:none;border-bottom:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:700;letter-spacing:.04em;cursor:pointer}
+.nav-btn.active{color:var(--acc);border-bottom-color:var(--acc)}
+#proj-bar{background:#F0A02012;border-bottom:1px solid #F0A02025;padding:5px 14px;font-size:11px;color:var(--dim);display:flex;align-items:center;gap:10px}
+/* MAIN */
+#main{padding:14px 12px 60px;max-width:1100px;margin:0 auto}
+.page{display:none}
+.page.active{display:block}
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+#loading .logo-big{font-size:36px;font-weight:800;color:var(--acc);letter-spacing:.06em;margin-bottom:8px}
+#loading .sub{font-size:12px;color:var(--mut);margin-bottom:28px;text-align:center}
+.spinner{width:32px;height:32px;border:3px solid var(--bord);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a3a2a;border:1px solid var(--grn);color:var(--grn);padding:10px 20px;border-radius:6px;font-size:13px;font-weight:700;z-index:999;display:none;transition:opacity .3s}
+#toast.err{background:var(--redb);border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="logo-big">SGLAA</div>
+  <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto<br/>DNIT 031/2024-ES</div>
+  <div class="spinner"></div>
+</div>
+<div id="toast"></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">CA</div>
+  <div style="flex:1">
+    <div style="font-weight:800;font-size:15px">SGLAA</div>
+    <div style="font-size:10px;color:var(--mut)">Laboratorio de Asfalto . DNIT 031/2024-ES</div>
+  </div>
+  <select id="proj-sel" style="max-width:220px;font-size:11px;padding:4px 7px" onchange="APP.selecionarProjeto(this.value)">
+    <option value="">-- Selecione a obra --</option>
+  </select>
+  <div style="width:8px;height:8px;border-radius:50%;background:var(--grn);box-shadow:0 0 6px var(--grn)" title="Online"></div>
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nav-btn active" onclick="APP.ir('projetos')" id="tab-projetos">[P] Projetos</button>
+  <button class="nav-btn" onclick="APP.ir('extgran')" id="tab-extgran">[EG] Extr+Granu</button>
+  <button class="nav-btn" onclick="APP.ir('rt')" id="tab-rt">[RT] Tracao</button>
+  <button class="nav-btn" onclick="APP.ir('marshall')" id="tab-marshall">[M] Marshall</button>
+  <button class="nav-btn" onclick="APP.ir('equiv')" id="tab-equiv">[SE] Eq.Areia</button>
+  <button class="nav-btn" onclick="APP.ir('estat')" id="tab-estat">[S] Estatistico</button>
+  <button class="nav-btn" onclick="APP.ir('relatorio')" id="tab-relatorio">[R] Relatorio</button>
+</div>
+
+<!-- PROJ BAR -->
+<div id="proj-bar" style="display:none">
+  <span style="color:var(--acc);font-weight:700" id="proj-nome-bar">--</span>
+  <span id="proj-info-bar"></span>
+  <button onclick="APP.ir('projetos')" style="margin-left:auto;background:transparent;border:1px solid var(--bord);color:var(--acc);padding:2px 8px;font-size:10px">trocar</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- ===== PROJETOS ===== -->
+<div class="page active" id="page-projetos">
+  <div class="sec-title acc">Projetos Cadastrados</div>
+  <div id="lista-projetos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px"></div>
+  <div class="card" id="form-projeto">
+    <div class="sec-title acc" id="form-proj-title">Novo Projeto</div>
+    <div class="row">
+      <div class="field" style="width:calc(40% - 4px)"><label>Codigo do Projeto</label><input id="fp-codigo" placeholder="Ex: ECOA-EGL16-19"></div>
+      <div class="field" style="flex:1"><label>Nome / Descricao</label><input id="fp-nome" placeholder="Ex: EGL 16-19 CAP 50/70"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Cliente / Obra</label><input id="fp-cliente" placeholder="Ex: EPR Sul de Minas"></div>
+      <div class="field" style="width:150px"><label>Data</label><input type="date" id="fp-data"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Responsavel Tecnico</label><input id="fp-resp"></div>
+      <div class="field" style="flex:1"><label>Engenheiro Responsavel</label><input id="fp-eng"></div>
+      <div class="field" style="width:140px"><label>CREA</label><input id="fp-crea"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="width:160px"><label>Tipo de CAP</label>
+        <select id="fp-cap"><option>CAP 30/45</option><option>CAP 50/70</option><option>CAP 85/100</option></select>
+      </div>
+      <div class="field" style="width:180px"><label>Faixa Granulometrica</label>
+        <select id="fp-faixa"><option value="A-25">A-25 (TNM 25mm)</option><option value="B-19">B-19 (TNM 19mm)</option><option value="C-12.5" selected>C-12,5 (TNM 12,5mm)</option><option value="D-9.5">D-9,5 (TNM 9,5mm)</option></select>
+      </div>
+      <div class="field" style="width:150px"><label>Teor CAP Otimo (%)</label><input type="number" step="0.01" id="fp-teor" placeholder="5.50"></div>
+    </div>
+    <div class="sec-title" style="margin-top:8px">Limites de Controle</div>
+    <div class="row">
+      <div class="field" style="width:120px"><label>Vv Min (%)</label><input type="number" step="0.1" id="fp-vv-min" value="3.0"></div>
+      <div class="field" style="width:120px"><label>Vv Max (%)</label><input type="number" step="0.1" id="fp-vv-max" value="5.0"></div>
+      <div class="field" style="width:120px"><label>RBV Min (%)</label><input type="number" step="0.1" id="fp-rbv-min" value="65.0"></div>
+      <div class="field" style="width:120px"><label>RBV Max (%)</label><input type="number" step="0.1" id="fp-rbv-max" value="78.0"></div>
+      <div class="field" style="width:120px"><label>VAM Min (%)</label><input type="number" step="0.1" id="fp-vam-min" value="13.0"></div>
+      <div class="field" style="width:140px"><label>Estabil. Min (kgf)</label><input type="number" step="1" id="fp-est-min" value="500"></div>
+      <div class="field" style="width:120px"><label>RT Min (MPa)</label><input type="number" step="0.01" id="fp-rt-min" value="0.65"></div>
+      <div class="field" style="width:120px"><label>SE Min (%)</label><input type="number" step="1" id="fp-se-min" value="55"></div>
+    </div>
+    <div class="sec-title" style="margin-top:8px">Faixa Granulometrica de Trabalho (% Passante)</div>
+    <div style="overflow-x:auto">
+      <table id="fp-faixa-table">
+        <thead><tr><th>Peneira</th><th>Min%</th><th>Max%</th><th>Faixa DNIT Ref.</th></tr></thead>
+        <tbody id="fp-faixa-tbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button onclick="APP.salvarProjeto()" style="flex:1;background:var(--acc);color:var(--bg);font-size:14px;padding:10px">Salvar Projeto</button>
+      <button onclick="APP.cancelarProjeto()" id="btn-cancelar-proj" style="background:var(--surf);color:var(--dim);border:1px solid var(--bord);display:none">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXTRACAO + GRANULOMETRIA ===== -->
+<div class="page" id="page-extgran">
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-title acc">Extracao de Betume (DNER ME-053) + Granulometria (DNIT 412)</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Trecho / KM</label><input id="eg-trecho" placeholder="Ex: KM 45+200"></div>
+      <div class="field" style="flex:1"><label>Lote / Nr. Amostra</label><input id="eg-lote" placeholder="Ex: EXT-007"></div>
+      <div class="field" style="flex:1"><label>Tecnico</label><input id="eg-tec" placeholder="Nome"></div>
+      <div class="field" style="width:160px"><label>Data / Hora</label><input type="datetime-local" id="eg-data"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="width:200px"><label>Metodo de Extracao</label>
+        <select id="eg-met"><option>Soxhlet (DNIT 158)</option><option>Ignicao (ASTM D6307)</option><option>Centrifuga</option></select>
+      </div>
+      <div class="field" style="width:180px"><label>Massa Mistura Asf. (g)</label><input type="number" step="0.1" id="eg-mmist" placeholder="Ex: 1200.0"></div>
+      <div class="field" style="width:150px"><label>Fator Correcao kf (%)</label><input type="number" step="0.001" id="eg-kf" value="0.000"></div>
+    </div>
+    <!-- Resultado extracao -->
+    <div id="eg-res-ext" style="display:none;margin-top:8px;padding:10px;background:var(--surf);border-radius:6px;border:1px solid var(--bord)">
+      <div class="row">
+        <div style="flex:1"><div style="font-size:10px;color:var(--mut);margin-bottom:2px">Massa Agregados (S peneiras)</div><div class="result-val" id="eg-magg-show">-</div></div>
+        <div style="flex:1"><div style="font-size:10px;color:var(--mut);margin-bottom:2px">Teor CAP Pb (%)</div><div class="result-val" id="eg-pb-show">-</div></div>
+        <div style="flex:1"><div style="font-size:10px;color:var(--mut);margin-bottom:2px">Desvio (+-0,3%)</div><div class="result-val" id="eg-desvio-show">-</div></div>
+        <div style="flex:1;display:flex;align-items:center"><div id="eg-pb-badge"></div></div>
+      </div>
+    </div>
+  </div>
+  <!-- Tabela peneiras -->
+  <div class="card">
+    <div class="sec-title acc">Pesos Retidos nas Peneiras (g) - digitar apos extracao</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:8px">A soma dos retidos = M.agregados -> alimenta o Pb automaticamente. Comparado contra a faixa do projeto selecionado.</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Peneira</th><th>Retido (g)</th><th>%Ret.Ind.</th><th>%Ret.Acum.</th><th style="color:var(--txt)">%Passante</th><th>Lim.Min</th><th>Lim.Max</th><th>Sit.</th></tr></thead>
+        <tbody id="eg-pen-tbody"></tbody>
+        <tfoot><tr style="background:var(--surf)">
+          <td style="font-weight:700;color:var(--txt)">TOTAL</td>
+          <td style="font-weight:700;color:var(--acc)" id="eg-total-ret">-</td>
+          <td colspan="3" style="color:var(--dim);font-size:10px" id="eg-perda-show"></td>
+          <td colspan="3"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <!-- Salvar -->
+    <div style="margin-top:10px;padding:10px;background:var(--surf);border-radius:6px">
+      <div style="font-size:10px;color:var(--mut);margin-bottom:6px;font-weight:700;text-transform:uppercase">Salvar Resultado</div>
+      <button onclick="APP.salvarEnsaio('extgran')" style="width:100%;background:var(--grn);color:var(--bg);font-size:14px;padding:10px" id="btn-salvar-eg">Salvar Resultado</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RT ===== -->
+<div class="page" id="page-rt">
+  <div class="card">
+    <div class="sec-title acc">Resistencia a Tracao por Compressao Diametral - DNIT 136/2018-ME</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:10px">RT = (2 x F) / (PI x D x H) x 0,0981 . F em kgf . D e H em cm . resultado em MPa . Criterio: RT >= 0,65 MPa</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Trecho / KM</label><input id="rt-trecho"></div>
+      <div class="field" style="flex:1"><label>Lote / Nr. CP</label><input id="rt-lote"></div>
+      <div class="field" style="flex:1"><label>Tecnico</label><input id="rt-tec"></div>
+      <div class="field" style="width:160px"><label>Data / Hora</label><input type="datetime-local" id="rt-data"></div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:10px">
+      <table>
+        <thead><tr><th>CP Nr.</th><th>Carga F (kgf)</th><th>Diam. D (cm)</th><th>Alt. H (cm)</th><th>RT (MPa)</th><th>Situacao</th></tr></thead>
+        <tbody id="rt-tbody"></tbody>
+      </table>
+    </div>
+    <button onclick="APP.addCPRT()" style="background:var(--surf);color:var(--acc);border:1px solid var(--bord);padding:5px 12px;font-size:11px;margin-bottom:10px">+ CP</button>
+    <div id="rt-media-box" style="display:none;padding:10px;background:var(--surf);border-radius:6px;margin-bottom:10px">
+      <div class="row" style="align-items:center;gap:12px">
+        <div><div style="font-size:10px;color:var(--mut)">Media RT</div><div class="result-val" id="rt-media-val">-</div></div>
+        <div id="rt-media-badge"></div>
+      </div>
+    </div>
+    <button onclick="APP.salvarEnsaio('rt')" style="width:100%;background:var(--grn);color:var(--bg);font-size:14px;padding:10px">Salvar Resultado</button>
+  </div>
+</div>
+
+<!-- ===== MARSHALL ===== -->
+<div class="page" id="page-marshall">
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-title acc">Ensaio Rice - DNIT 427-ME (Gmm = A/(A+B-C) x (p25/pT))</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>A - Massa amostra seca (g)</label><input type="number" step="0.1" id="ri-A"></div>
+      <div class="field" style="flex:1"><label>B - Picnom.+agua (g)</label><input type="number" step="0.1" id="ri-B"></div>
+      <div class="field" style="flex:1"><label>C - Picnom.+am.+agua (g)</label><input type="number" step="0.1" id="ri-C"></div>
+      <div class="field" style="width:120px"><label>Temp. agua (oC)</label><input type="number" step="1" id="ri-T" value="25"></div>
+    </div>
+    <div id="ri-res" style="display:none;padding:8px 12px;background:var(--blub);border-radius:4px;border:1px solid var(--blu)40">
+      <span style="font-size:11px;color:var(--dim)">Gmm calculado: </span>
+      <span class="result-val" id="ri-gmm-val" style="color:var(--blu);font-size:16px">-</span>
+      <span style="font-size:10px;color:var(--mut);margin-left:8px">Alimenta automaticamente o Marshall abaixo</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-title acc">Parametros Marshall + Volumetricos - DNIT 447/449</div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="field" style="flex:1"><label>Trecho / KM</label><input id="ma-trecho"></div>
+      <div class="field" style="flex:1"><label>Lote / Nr.</label><input id="ma-lote"></div>
+      <div class="field" style="flex:1"><label>Tecnico</label><input id="ma-tec"></div>
+      <div class="field" style="width:160px"><label>Data / Hora</label><input type="datetime-local" id="ma-data"></div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="field" style="width:160px">
+        <label>Gmm (fonte)</label>
+        <select id="ma-gmm-modo" onchange="APP.toggleGmmModo()">
+          <option value="rice">Do Rice acima</option>
+          <option value="manual">Digitar manualmente</option>
+        </select>
+      </div>
+      <div class="field" style="width:150px" id="ma-gmm-manual-wrap" style="display:none">
+        <label>Gmm manual</label><input type="number" step="0.0001" id="ma-gmm-manual" placeholder="2.5201">
+      </div>
+      <div id="ma-gmm-show-wrap" style="display:flex;align-items:flex-end;padding-bottom:8px">
+        <div style="padding:5px 10px;background:var(--blub);border:1px solid var(--blu)40;border-radius:4px;font-size:12px">
+          Gmm: <span id="ma-gmm-show" style="color:var(--blu);font-weight:700">-</span>
+        </div>
+      </div>
+      <div class="field" style="width:160px"><label>Gsb - Dens. Real Agreg.</label><input type="number" step="0.001" id="ma-gsb" value="2.700"></div>
+      <div class="field" style="width:140px"><label>Pb - Teor CAP (%)</label><input type="number" step="0.01" id="ma-pb" placeholder="5.50"></div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:10px">
+      <table>
+        <thead><tr><th>CP</th><th>A-Seco(g)</th><th>B-Sat.Sup(g)</th><th>C-Subm(g)</th><th>Gmb</th><th>Vv(%)</th><th>VAM(%)</th><th>RBV(%)</th><th>H(cm)</th><th>Fator</th><th>E.Lida(kgf)</th><th>E.Corr(kgf)</th><th>Flu(mm)</th></tr></thead>
+        <tbody id="ma-tbody"></tbody>
+      </table>
+    </div>
+    <button onclick="APP.addCPMA()" style="background:var(--surf);color:var(--acc);border:1px solid var(--bord);padding:5px 12px;font-size:11px;margin-bottom:10px">+ CP</button>
+    <div id="ma-medias" style="display:none;padding:10px;background:var(--surf);border-radius:6px;margin-bottom:10px">
+      <div class="sec-title">Medias</div>
+      <div class="row" id="ma-medias-row"></div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="ma-badges-row"></div>
+    </div>
+    <button onclick="APP.salvarEnsaio('marshall')" style="width:100%;background:var(--grn);color:var(--bg);font-size:14px;padding:10px">Salvar Resultado</button>
+  </div>
+</div>
+
+<!-- ===== EQUIV AREIA ===== -->
+<div class="page" id="page-equiv">
+  <div class="card">
+    <div class="sec-title acc">Equivalente de Areia - DNIT 450-ME (SE = H2/H1 x 100)</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:10px">H1 = nivel total (floculado+areia) . H2 = nivel da areia . Criterio: SE >= 55%</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Trecho / KM</label><input id="se-trecho"></div>
+      <div class="field" style="flex:1"><label>Lote / Nr.</label><input id="se-lote"></div>
+      <div class="field" style="flex:1"><label>Tecnico</label><input id="se-tec"></div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:10px">
+      <table>
+        <thead><tr><th>Amostra</th><th>H1 - Total (mm)</th><th>H2 - Areia (mm)</th><th>SE (%)</th><th>Situacao</th></tr></thead>
+        <tbody id="se-tbody"></tbody>
+      </table>
+    </div>
+    <button onclick="APP.addSE()" style="background:var(--surf);color:var(--acc);border:1px solid var(--bord);padding:5px 12px;font-size:11px;margin-bottom:10px">+ Amostra</button>
+    <div id="se-media-box" style="display:none;padding:10px;background:var(--surf);border-radius:6px;margin-bottom:10px">
+      <div class="row" style="align-items:center;gap:12px">
+        <div><div style="font-size:10px;color:var(--mut)">Media SE</div><div class="result-val" id="se-media-val">-</div></div>
+        <div id="se-media-badge"></div>
+      </div>
+    </div>
+    <button onclick="APP.salvarEnsaio('equiv')" style="width:100%;background:var(--grn);color:var(--bg);font-size:14px;padding:10px">Salvar Resultado</button>
+  </div>
+</div>
+
+<!-- ===== CONTROLE ESTATISTICO ===== -->
+<div class="page" id="page-estat">
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-title acc">Controle Estatistico - Resumo por Projeto e Periodo (Anexo A DNIT 031/2024)</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Projeto / Obra</label>
+        <select id="es-proj-sel" onchange="APP.carregarEstat()">
+          <option value="todos">Todos os projetos</option>
+        </select>
+      </div>
+      <div class="field" style="width:140px"><label>Data Inicio</label><input type="date" id="es-ini" onchange="APP.carregarEstat()"></div>
+      <div class="field" style="width:140px"><label>Data Fim</label><input type="date" id="es-fim" onchange="APP.carregarEstat()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-title" id="es-titulo">Aguardando selecao...</div>
+    <div style="overflow-x:auto">
+      <table id="es-tabela">
+        <thead id="es-thead"></thead>
+        <tbody id="es-tbody"></tbody>
+        <tfoot id="es-tfoot"></tfoot>
+      </table>
+    </div>
+    <div style="margin-top:12px;text-align:center">
+      <button onclick="APP.gerarPDFEstat()" id="btn-pdf-estat" style="background:var(--acc);color:var(--bg);font-size:14px;padding:11px 30px">Gerar PDF Controle Estatistico</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RELATORIO ===== -->
+<div class="page" id="page-relatorio">
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-title acc">Relatorio de Controle Tecnologico - DNIT 031/2024-ES</div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Projeto / Obra</label>
+        <select id="rel-proj" onchange="APP.carregarRelatorio()">
+          <option value="todos">Todos os projetos</option>
+        </select>
+      </div>
+      <div class="field" style="width:140px"><label>Data Inicio</label><input type="date" id="rel-ini" onchange="APP.carregarRelatorio()"></div>
+      <div class="field" style="width:140px"><label>Data Fim</label><input type="date" id="rel-fim" onchange="APP.carregarRelatorio()"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Tecnico de Laboratorio</label><input id="rel-tec"></div>
+      <div class="field" style="flex:1"><label>Engenheiro Responsavel</label><input id="rel-eng"></div>
+      <div class="field" style="width:140px"><label>CREA</label><input id="rel-crea"></div>
+      <div class="field" style="flex:1"><label>Fiscal DNIT</label><input id="rel-fiscal"></div>
+    </div>
+    <div class="field"><label>Observacoes / Ressalvas</label><textarea id="rel-obs" rows="2"></textarea></div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-title" id="rel-titulo">Aguardando selecao...</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px" id="rel-kpis"></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Tipo</th><th>Projeto</th><th>Data</th><th>Trecho</th><th>Tecnico</th><th>Status</th></tr></thead>
+    <tbody id="rel-tbody"></tbody></table></div>
+  </div>
+  <div style="text-align:center;padding:12px">
+    <button onclick="APP.gerarPDFRelatorio()" style="background:var(--acc);color:var(--bg);font-size:15px;padding:12px 40px;border-radius:6px">Gerar Relatorio PDF</button>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script type="module">
+// ============================================================
+// FIREBASE
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, addDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const fbCfg = {
+  apiKey:"AIzaSyCvYQYm9vZpkZ2tKMm-4zouYoI71Wb9ldc",
+  authDomain:"sgq-asfalto.firebaseapp.com",
+  projectId:"sgq-asfalto",
+  storageBucket:"sgq-asfalto.firebasestorage.app",
+  messagingSenderId:"159792875402",
+  appId:"1:159792875402:web:e54a3e554bdfa736226a73"
+};
+const fb = initializeApp(fbCfg);
+const db = getFirestore(fb);
+
+// ============================================================
+// HELPERS
+// ============================================================
+const nv = v => parseFloat(v) || 0;
+const fmt = (v,d=2) => (v===null||v===undefined||v===""||isNaN(v)) ? "—" : Number(v).toFixed(d);
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const nowStr = () => new Date().toISOString().slice(0,16);
+const dtStr = iso => { if(!iso) return "—"; const d=new Date(iso); return d.toLocaleDateString("pt-BR")+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); };
+const dStr  = iso => { if(!iso) return "—"; return new Date(iso).toLocaleDateString("pt-BR"); };
+const el = id => document.getElementById(id);
+const toast = (msg, err=false) => {
+  const t=el("toast"); t.textContent=msg; t.className=err?"err":""; t.style.display="block";
+  setTimeout(()=>{ t.style.opacity="0"; setTimeout(()=>{ t.style.display="none"; t.style.opacity="1"; },300); },2500);
+};
+const badge = (s) => {
+  const cls = s==="CONFORME"?"conf":s==="NAO CONFORME"?"nconf":"pend";
+  const lbl = s==="CONFORME"?"OK CONF":s==="NAO CONFORME"?"NC":"PEND";
+  return '<span class="badge '+cls+'">'+lbl+'</span>';
+};
+const avalia = (v,mn,mx) => {
+  const vn=parseFloat(v); if(isNaN(vn)||v===""||v===null) return "PENDENTE";
+  if(mn!==null&&mn!==""&&!isNaN(mn)&&vn<parseFloat(mn)) return "NAO CONFORME";
+  if(mx!==null&&mx!==""&&!isNaN(mx)&&vn>parseFloat(mx)) return "NAO CONFORME";
+  return "CONFORME";
+};
+
+// ============================================================
+// PENEIRAS
+// ============================================================
+const PENS = [
+  {id:"p38",  lb:'3/4"  19,05mm', dnit:"pen38"},
+  {id:"p25",  lb:'1/2"  12,70mm', dnit:"pen25"},
+  {id:"p19",  lb:'3/8"   9,52mm', dnit:"pen19"},
+  {id:"p127", lb:'1/4"   4,76mm', dnit:"pen127"},
+  {id:"p48",  lb:'Nr4    2,00mm', dnit:"pen48"},
+  {id:"p236", lb:'Nr8    0,420mm',dnit:"pen236"},
+  {id:"p118", lb:'Nr16   0,180mm',dnit:"pen118"},
+  {id:"p060", lb:'Nr30   0,074mm',dnit:"pen060"},
+  {id:"p030", lb:'Nr50   0,074mm',dnit:"pen030"},
+  {id:"p015", lb:'Nr100  0,074mm',dnit:"pen015"},
+  {id:"p0075",lb:'Nr200  0,075mm',dnit:"pen0075"},
+  {id:"fundo",lb:'Fundo',          dnit:"fundo"},
+];
+
+const FAIXAS_DNIT = {
+  "A-25":{pen38:100,pen25:[90,100],pen19:[75,89],pen127:[58,78],pen95:[48,71],pen63:[35,61],pen48:[29,55],pen236:[19,45],pen118:[13,36],pen060:[9,28],pen030:[5,21],pen015:[2,14],pen0075:[1,7]},
+  "B-19":{pen25:100,pen19:[90,100],pen127:[70,89],pen95:[55,82],pen63:[42,70],pen48:[35,63],pen236:[23,49],pen118:[16,37],pen060:[10,28],pen030:[6,20],pen015:[4,13],pen0075:[2,8]},
+  "C-12.5":{pen19:100,pen127:[90,100],pen95:[73,89],pen63:[53,78],pen48:[44,72],pen236:[28,58],pen118:[17,45],pen060:[11,35],pen030:[6,25],pen015:[3,17],pen0075:[2,10]},
+  "D-9.5":{pen127:100,pen95:[90,100],pen63:[65,89],pen48:[53,83],pen236:[32,67],pen118:[20,52],pen060:[13,40],pen030:[8,29],pen015:[4,19],pen0075:[2,10]},
+};
+
+// Corretor Marshall por altura
+const MC={"5.08":1.19,"5.40":1.14,"5.72":1.09,"6.03":1.04,"6.35":1.00,"6.67":0.96,"6.99":0.93,"7.30":0.89,"7.62":0.86};
+const getMC=h=>{const ks=Object.keys(MC).map(Number).sort((a,b)=>a-b);let b=ks[0],bd=Math.abs(h-ks[0]);for(const k of ks){const d=Math.abs(h-k);if(d<bd){bd=d;b=k;}}return MC[b.toFixed(2)]||1;};
+
+// Densidade agua para Rice
+const DW={15:0.99913,20:0.99820,21:0.99799,22:0.99777,23:0.99754,24:0.99730,25:0.99705,26:0.99678,27:0.99651,28:0.99623,29:0.99595,30:0.99565};
+const getDW=t=>{const k=Math.round(nv(t)||25);return DW[k]||(k<15?0.99913:0.99503);};
+
+// K table Tabela A1
+const KT={5:1.55,6:1.41,7:1.36,8:1.31,9:1.25,10:1.21,11:1.19,12:1.16,13:1.13,14:1.11,15:1.10};
+const getK=n=>{if(n<=5)return 1.55;if(n>=15)return 1.10;return KT[n]||1.10;};
+
+// ============================================================
+// STATE
+// ============================================================
+let projetos = [];
+let ensaios  = [];
+let projetoAtivo = null;
+let rtCPs = [];
+let maCPs = [];
+let seDets = [];
+let editandoProj = null;
+
+// ============================================================
+// FIREBASE CRUD
+// ============================================================
+async function loadAll() {
+  try {
+    const [ps, es] = await Promise.all([
+      getDocs(collection(db,"projetos")),
+      getDocs(collection(db,"ensaios"))
+    ]);
+    projetos = ps.docs.map(d=>({...d.data(),id:d.id}));
+    ensaios  = es.docs.map(d=>({...d.data(),id:d.id}));
+  } catch(e) {
+    console.error("Firebase load error:",e);
+    toast("Erro ao carregar dados. Verifique a conexao.",true);
+  }
+}
+async function saveProjeto(p) {
+  await setDoc(doc(db,"projetos",p.id), p);
+}
+async function delProjeto(id) {
+  await deleteDoc(doc(db,"projetos",id));
+}
+async function saveEnsaio(e) {
+  await setDoc(doc(db,"ensaios",e.id), e);
+}
+async function delEnsaio(id) {
+  await deleteDoc(doc(db,"ensaios",id));
+}
+
+// ============================================================
+// APP OBJECT (accessible from onclick)
+// ============================================================
+window.APP = {
+
+// --- NAVEGACAO ---
+ir(page) {
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  el("page-"+page).classList.add("active");
+  el("tab-"+page).classList.add("active");
+  if(page==="estat") APP.carregarEstat();
+  if(page==="relatorio") APP.carregarRelatorio();
+},
+
+// --- SELECIONAR PROJETO ---
+selecionarProjeto(id) {
+  projetoAtivo = projetos.find(p=>p.id===id)||null;
+  const bar = el("proj-bar");
+  if(projetoAtivo) {
+    bar.style.display="flex";
+    el("proj-nome-bar").textContent = projetoAtivo.codigo+" — "+projetoAtivo.nome;
+    el("proj-info-bar").textContent = projetoAtivo.capTipo+" . Teor: "+projetoAtivo.teor+"% . Faixa: "+projetoAtivo.faixa;
+    // Atualizar ma-pb se tiver teor
+    if(projetoAtivo.teor) el("ma-pb").value = projetoAtivo.teor;
+    el("ma-gmm-show").textContent = "-";
+    APP.calcGmm();
+    APP.renderGranPeneiras();
+  } else {
+    bar.style.display="none";
+  }
+},
+
+// --- RENDER PROJETOS ---
+renderProjetos() {
+  // Atualizar selects
+  const opts = '<option value="">-- Selecione --</option>'+projetos.map(p=>'<option value="'+p.id+'">'+p.codigo+' - '+p.nome.slice(0,25)+'</option>').join("");
+  el("proj-sel").innerHTML = opts;
+  el("es-proj-sel").innerHTML = '<option value="todos">Todos</option>'+projetos.map(p=>'<option value="'+p.id+'">'+p.codigo+'</option>').join("");
+  el("rel-proj").innerHTML = '<option value="todos">Todos</option>'+projetos.map(p=>'<option value="'+p.id+'">'+p.codigo+'</option>').join("");
+
+  // Lista cards
+  const div = el("lista-projetos");
+  if(!projetos.length) { div.innerHTML='<div style="color:var(--mut);padding:20px">Nenhum projeto. Cadastre abaixo.</div>'; return; }
+  div.innerHTML = projetos.map(p=>{
+    const ativo = projetoAtivo?.id===p.id;
+    return '<div class="card" style="border-left:3px solid '+(ativo?"var(--acc)":"var(--bord)");
+    + '">'
+    + '<div style="font-weight:800;font-size:14px;color:'+(ativo?"var(--acc)":"var(--txt)")+'">'
+    + p.codigo+'</div>'
+    + '<div style="font-size:12px;color:var(--dim);margin:4px 0">'+p.nome+'</div>'
+    + '<div style="font-size:10px;color:var(--mut);line-height:1.7">'
+    + (p.cliente?'Cliente: '+p.cliente+'<br>':'')
+    + p.capTipo+' . Teor otimo: '+p.teor+'% . Faixa: '+p.faixa
+    + '</div>'
+    + '<div style="display:flex;gap:6px;margin-top:8px">'
+    + '<button onclick="APP.usarProjeto(''+p.id+'')" style="flex:1;background:'+(ativo?"var(--acc)":"var(--blub)")+';color:'+(ativo?"var(--bg)":"var(--blu)")+';border:1px solid '+(ativo?"var(--acc)":"var(--blu)")+'50;font-size:12px;padding:5px">'
+    + (ativo?"Selecionado":"Usar nos ensaios")+'</button>'
+    + '<button onclick="APP.editarProjeto(''+p.id+'')" style="background:var(--surf);color:var(--dim);border:1px solid var(--bord);font-size:11px;padding:5px 10px">Editar</button>'
+    + '<button onclick="APP.excluirProjeto(''+p.id+'')" style="background:var(--redb);color:var(--red);border:none;font-size:11px;padding:5px 10px">X</button>'
+    + '</div></div>';
+  }).join("");
+  // fix the map above
+  div.innerHTML = projetos.map(p=>{
+    const ativo = projetoAtivo?.id===p.id;
+    return [
+      '<div class="card" style="border-left:3px solid '+(ativo?"var(--acc)":"var(--bord)")+'">',
+      '<div style="font-weight:800;font-size:14px;color:'+(ativo?"var(--acc)":"var(--txt)")+'">'+p.codigo+'</div>',
+      '<div style="font-size:12px;color:var(--dim);margin:4px 0">'+p.nome+'</div>',
+      '<div style="font-size:10px;color:var(--mut);line-height:1.7">',
+      (p.cliente?'Cliente: '+p.cliente+'<br>':''),
+      p.capTipo+' . Teor: '+p.teor+'% . Faixa: '+p.faixa,
+      '</div>',
+      '<div style="display:flex;gap:6px;margin-top:8px">',
+      '<button onclick="APP.usarProjeto(''+p.id+'')" style="flex:1;background:'+(ativo?"var(--acc)":"var(--blub)")+';color:'+(ativo?"var(--bg)":"var(--blu)")+';border:1px solid '+(ativo?"var(--acc)":"var(--blu)")+'50;font-size:12px;padding:5px">'+(ativo?"Selecionado":"Usar nos ensaios")+'</button>',
+      '<button onclick="APP.editarProjeto(''+p.id+'')" style="background:var(--surf);color:var(--dim);border:1px solid var(--bord);font-size:11px;padding:5px 10px">Editar</button>',
+      '<button onclick="APP.excluirProjeto(''+p.id+'')" style="background:var(--redb);color:var(--red);border:none;font-size:11px;padding:5px 10px">X</button>',
+      '</div></div>'
+    ].join("");
+  }).join("");
+},
+
+usarProjeto(id) {
+  el("proj-sel").value = id;
+  APP.selecionarProjeto(id);
+  APP.renderProjetos();
+},
+
+// --- FORM PROJETO ---
+renderFormFaixa() {
+  const faixa = el("fp-faixa").value;
+  const limites = FAIXAS_DNIT[faixa]||{};
+  const tbody = el("fp-faixa-tbody");
+  tbody.innerHTML = PENS.filter(p=>p.id!=="fundo").map(p=>{
+    const fp = editandoProj?.faixaProjeto?.[p.id]||{};
+    const lim = limites[p.dnit];
+    const limStr = Array.isArray(lim)?lim[0]+"-"+lim[1]+"%":lim!=null?lim+"%":"—";
+    return '<tr><td style="color:var(--txt);font-size:11px">'+p.lb+'</td>'
+      +'<td><input type="number" step="0.1" id="fpl-min-'+p.id+'" value="'+(fp.min||"")+'" style="width:70px" placeholder="min"></td>'
+      +'<td><input type="number" step="0.1" id="fpl-max-'+p.id+'" value="'+(fp.max||"")+'" style="width:70px" placeholder="max"></td>'
+      +'<td style="color:var(--mut);font-size:10px">'+limStr+'</td></tr>';
+  }).join("");
+},
+
+cancelarProjeto() {
+  editandoProj=null;
+  el("form-proj-title").textContent="Novo Projeto";
+  el("btn-cancelar-proj").style.display="none";
+  ["fp-codigo","fp-nome","fp-cliente","fp-resp","fp-eng","fp-crea","fp-teor","fp-data"].forEach(id=>el(id).value="");
+  el("fp-cap").value="CAP 50/70"; el("fp-faixa").value="C-12.5";
+  ["fp-vv-min","fp-vv-max","fp-rbv-min","fp-rbv-max","fp-vam-min","fp-est-min","fp-rt-min","fp-se-min"]
+    .forEach((id,i)=>el(id).value=["3.0","5.0","65.0","78.0","13.0","500","0.65","55"][i]);
+  APP.renderFormFaixa();
+},
+
+editarProjeto(id) {
+  editandoProj = projetos.find(p=>p.id===id);
+  if(!editandoProj) return;
+  el("form-proj-title").textContent="Editar: "+editandoProj.codigo;
+  el("btn-cancelar-proj").style.display="block";
+  el("fp-codigo").value=editandoProj.codigo||"";
+  el("fp-nome").value=editandoProj.nome||"";
+  el("fp-cliente").value=editandoProj.cliente||"";
+  el("fp-resp").value=editandoProj.resp||"";
+  el("fp-eng").value=editandoProj.eng||"";
+  el("fp-crea").value=editandoProj.crea||"";
+  el("fp-teor").value=editandoProj.teor||"";
+  el("fp-data").value=editandoProj.dataProj||"";
+  el("fp-cap").value=editandoProj.capTipo||"CAP 50/70";
+  el("fp-faixa").value=editandoProj.faixa||"C-12.5";
+  el("fp-vv-min").value=editandoProj.vvMin||"3.0";
+  el("fp-vv-max").value=editandoProj.vvMax||"5.0";
+  el("fp-rbv-min").value=editandoProj.rbvMin||"65.0";
+  el("fp-rbv-max").value=editandoProj.rbvMax||"78.0";
+  el("fp-vam-min").value=editandoProj.vamMin||"13.0";
+  el("fp-est-min").value=editandoProj.estMin||"500";
+  el("fp-rt-min").value=editandoProj.rtMin||"0.65";
+  el("fp-se-min").value=editandoProj.seMin||"55";
+  APP.renderFormFaixa();
+  el("form-projeto").scrollIntoView({behavior:"smooth"});
+},
+
+async salvarProjeto() {
+  const codigo = el("fp-codigo").value.trim();
+  const nome = el("fp-nome").value.trim();
+  if(!codigo||!nome){toast("Codigo e nome sao obrigatorios!",true);return;}
+  const faixaProjeto = {};
+  PENS.filter(p=>p.id!=="fundo").forEach(p=>{
+    const mn=el("fpl-min-"+p.id)?.value;
+    const mx=el("fpl-max-"+p.id)?.value;
+    if(mn||mx) faixaProjeto[p.id]={min:mn||"",max:mx||""};
+  });
+  const p = {
+    id: editandoProj?.id||uid(),
+    codigo, nome,
+    cliente:el("fp-cliente").value,
+    resp:el("fp-resp").value,
+    eng:el("fp-eng").value,
+    crea:el("fp-crea").value,
+    teor:el("fp-teor").value,
+    dataProj:el("fp-data").value,
+    capTipo:el("fp-cap").value,
+    faixa:el("fp-faixa").value,
+    vvMin:el("fp-vv-min").value,
+    vvMax:el("fp-vv-max").value,
+    rbvMin:el("fp-rbv-min").value,
+    rbvMax:el("fp-rbv-max").value,
+    vamMin:el("fp-vam-min").value,
+    estMin:el("fp-est-min").value,
+    rtMin:el("fp-rt-min").value,
+    seMin:el("fp-se-min").value,
+    faixaProjeto,
+  };
+  await saveProjeto(p);
+  if(editandoProj) projetos=projetos.map(x=>x.id===p.id?p:x);
+  else projetos.push(p);
+  APP.cancelarProjeto();
+  APP.renderProjetos();
+  toast("Projeto salvo!");
+},
+
+async excluirProjeto(id) {
+  if(!confirm("Excluir este projeto?")) return;
+  await delProjeto(id);
+  projetos=projetos.filter(p=>p.id!==id);
+  if(projetoAtivo?.id===id){projetoAtivo=null;el("proj-bar").style.display="none";}
+  APP.renderProjetos();
+  toast("Projeto excluido.");
+},
+
+// --- GRANULOMETRIA ---
+renderGranPeneiras() {
+  const proj = projetoAtivo;
+  const faixa = proj?.faixa||"C-12.5";
+  const faixaDNIT = FAIXAS_DNIT[faixa]||{};
+  const tbody = el("eg-pen-tbody");
+  tbody.innerHTML = PENS.map(p=>{
+    const fp = proj?.faixaProjeto?.[p.id]||{};
+    const lim = faixaDNIT[p.dnit];
+    const limMin = fp.min!==""&&fp.min!==undefined?fp.min:(Array.isArray(lim)?lim[0]:null);
+    const limMax = fp.max!==""&&fp.max!==undefined?fp.max:(Array.isArray(lim)?lim[1]:typeof lim==="number"?lim:null);
+    return '<tr id="eg-row-'+p.id+'">'
+      +'<td style="color:var(--txt);font-size:11px;white-space:nowrap">'+p.lb+'</td>'
+      +'<td><input type="number" step="0.01" id="eg-ret-'+p.id+'" placeholder="0.00" style="width:90px" oninput="APP.calcGran()"></td>'
+      +'<td id="eg-pri-'+p.id+'" style="color:var(--dim)">-</td>'
+      +'<td id="eg-pra-'+p.id+'" style="color:var(--dim)">-</td>'
+      +'<td id="eg-pp-'+p.id+'" style="font-weight:700">-</td>'
+      +'<td style="color:var(--mut);font-size:10px">'+(limMin!=null?limMin+"%":"—")+'</td>'
+      +'<td style="color:var(--mut);font-size:10px">'+(limMax!=null?limMax+"%":"—")+'</td>'
+      +'<td id="eg-sit-'+p.id+'">—</td>'
+      +'</tr>';
+  }).join("");
+},
+
+calcGran() {
+  const mmist = nv(el("eg-mmist")?.value);
+  const kf    = nv(el("eg-kf")?.value);
+  const proj  = projetoAtivo;
+  const faixa = proj?.faixa||"C-12.5";
+  const faixaDNIT = FAIXAS_DNIT[faixa]||{};
+
+  // Calcular soma retidos
+  let retAcum = 0, somaRet = 0;
+  const rows = [];
+  for(const p of PENS) {
+    const ret = nv(el("eg-ret-"+p.id)?.value);
+    somaRet += ret;
+  }
+  // massa agg = soma dos retidos
+  const massaAgg = somaRet;
+  el("eg-total-ret").textContent = massaAgg>0?fmt(massaAgg,2)+" g":"—";
+
+  // Calcular Pb
+  if(mmist>0&&massaAgg>0) {
+    const pb = ((mmist-massaAgg)/mmist)*100+kf;
+    const teorProj = nv(proj?.teor);
+    const desvio = teorProj>0?pb-teorProj:null;
+    const conforme = desvio!=null?Math.abs(desvio)<=0.3:null;
+    el("eg-magg-show").textContent = fmt(massaAgg,2)+" g";
+    el("eg-pb-show").textContent = fmt(pb,3)+"%";
+    el("eg-pb-show").style.color = conforme===false?"var(--red)":conforme===true?"var(--grn)":"var(--txt)";
+    el("eg-desvio-show").textContent = desvio!=null?((desvio>0?"+":"")+fmt(desvio,3)+"%"):"—";
+    el("eg-desvio-show").style.color = conforme===false?"var(--red)":conforme===true?"var(--grn)":"var(--txt)";
+    el("eg-pb-badge").innerHTML = conforme!=null?badge(conforme?"CONFORME":"NAO CONFORME"):"";
+    el("eg-res-ext").style.display="block";
+  } else {
+    el("eg-res-ext").style.display="none";
+  }
+
+  // Granulometria
+  retAcum=0;
+  const granRows = [];
+  for(const p of PENS) {
+    const ret = nv(el("eg-ret-"+p.id)?.value);
+    retAcum+=ret;
+    const pRI = massaAgg>0?(ret/massaAgg)*100:0;
+    const pRA = massaAgg>0?(retAcum/massaAgg)*100:0;
+    const pP  = 100-pRA;
+    granRows.push({...p,ret,pRI,pRA,pP});
+
+    if(el("eg-pri-"+p.id)) {
+      el("eg-pri-"+p.id).textContent = massaAgg>0?fmt(pRI,2):"—";
+      el("eg-pra-"+p.id).textContent = massaAgg>0?fmt(pRA,2):"—";
+      el("eg-pp-"+p.id).textContent  = massaAgg>0&&p.id!=="fundo"?fmt(pP,2):"—";
+
+      // verificar faixa
+      const fp = proj?.faixaProjeto?.[p.id]||{};
+      const lim = faixaDNIT[p.dnit];
+      const limMin = fp.min!==""&&fp.min!==undefined?parseFloat(fp.min):(Array.isArray(lim)?lim[0]:null);
+      const limMax = fp.max!==""&&fp.max!==undefined?parseFloat(fp.max):(Array.isArray(lim)?lim[1]:typeof lim==="number"?lim:null);
+
+      if(massaAgg>0&&p.id!=="fundo"&&(limMin!==null||limMax!==null)) {
+        const ok=(limMin===null||pP>=limMin)&&(limMax===null||pP<=limMax);
+        el("eg-pp-"+p.id).style.color = ok?"var(--grn)":"var(--red)";
+        el("eg-sit-"+p.id).innerHTML = badge(ok?"CONFORME":"NAO CONFORME");
+        el("eg-row-"+p.id).style.background = ok?"":"var(--redb)60";
+      } else {
+        el("eg-pp-"+p.id).style.color="var(--txt)";
+        el("eg-sit-"+p.id).innerHTML="—";
+        el("eg-row-"+p.id).style.background="";
+      }
+    }
+  }
+
+  // Perda
+  const perdaPct = massaAgg>0?(Math.abs(massaAgg-somaRet)/massaAgg)*100:0;
+  if(el("eg-perda-show")) {
+    el("eg-perda-show").textContent = massaAgg>0?"Perda: "+fmt(perdaPct,3)+"% "+(perdaPct>0.3?"ACIMA 0,3%":"OK"):"";
+    el("eg-perda-show").style.color = perdaPct>0.3?"var(--red)":"var(--grn)";
+  }
+  return granRows;
+},
+
+// --- RT ---
+renderRT() {
+  const tbody = el("rt-tbody");
+  tbody.innerHTML = rtCPs.map((cp,i)=>{
+    const rt = APP.calcRT(cp);
+    const proj=projetoAtivo;
+    const rtMin=nv(proj?.rtMin||0.65);
+    const ok = rt!==null?(rt>=rtMin):"pend";
+    return '<tr>'
+      +'<td style="color:var(--acc);font-weight:700">'+(i+1)+'</td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.F||"")+'" oninput="APP.updateRT('+i+','F',this.value)" style="width:80px"></td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.D||"10.16")+'" oninput="APP.updateRT('+i+','D',this.value)" style="width:75px"></td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.H||"")+'" oninput="APP.updateRT('+i+','H',this.value)" style="width:75px"></td>'
+      +'<td style="color:'+(rt!=null?(ok?"var(--grn)":"var(--red)"):"var(--mut)")+';font-weight:700">'+(rt!=null?fmt(rt,3)+" MPa":"—")+'</td>'
+      +'<td>'+(rt!=null?badge(ok?"CONFORME":"NAO CONFORME"):"—")+'</td>'
+      +'</tr>';
+  }).join("");
+  // media
+  const rts = rtCPs.map(cp=>APP.calcRT(cp)).filter(r=>r!==null);
+  if(rts.length) {
+    const med = rts.reduce((a,b)=>a+b,0)/rts.length;
+    const rtMin=nv(projetoAtivo?.rtMin||0.65);
+    el("rt-media-val").textContent = fmt(med,3)+" MPa";
+    el("rt-media-val").style.color = med>=rtMin?"var(--grn)":"var(--red)";
+    el("rt-media-badge").innerHTML = badge(med>=rtMin?"CONFORME":"NAO CONFORME");
+    el("rt-media-box").style.display="block";
+  } else {
+    el("rt-media-box").style.display="none";
+  }
+},
+calcRT(cp) {
+  const f=nv(cp.F),d=nv(cp.D),h=nv(cp.H);
+  if(!f||!d||!h) return null;
+  return (2*f)/(Math.PI*d*h)*0.0981;
+},
+updateRT(i,k,v) { rtCPs[i][k]=v; APP.renderRT(); },
+addCPRT() { rtCPs.push({F:"",D:"10.16",H:""}); APP.renderRT(); },
+
+// --- GMM RICE ---
+calcGmm() {
+  const A=nv(el("ri-A")?.value),B=nv(el("ri-B")?.value),C=nv(el("ri-C")?.value),T=nv(el("ri-T")?.value||25);
+  if(!A||!B||!C||(A+B-C)<=0){el("ri-res").style.display="none";return null;}
+  const gmm=(A/(A+B-C))*(getDW(T)/0.99705);
+  el("ri-gmm-val").textContent=fmt(gmm,4);
+  el("ri-res").style.display="block";
+  if(el("ma-gmm-show")) el("ma-gmm-show").textContent=fmt(gmm,4);
+  return gmm;
+},
+toggleGmmModo() {
+  const modo=el("ma-gmm-modo").value;
+  el("ma-gmm-manual-wrap").style.display=modo==="manual"?"block":"none";
+  el("ma-gmm-show-wrap").style.display=modo==="rice"?"flex":"none";
+},
+getGmm() {
+  const modo=el("ma-gmm-modo")?.value||"rice";
+  if(modo==="manual") return nv(el("ma-gmm-manual")?.value);
+  return APP.calcGmm()||nv(el("ri-A")?.value?((nv(el("ri-A").value)/(nv(el("ri-A").value)+nv(el("ri-B").value)-nv(el("ri-C").value)))*(getDW(nv(el("ri-T").value||25))/0.99705)):0);
+},
+
+// --- MARSHALL ---
+renderMA() {
+  const gmm=APP.getGmm();
+  const gsb=nv(el("ma-gsb")?.value||2.700);
+  const pb=nv(el("ma-pb")?.value);
+  const proj=projetoAtivo;
+  const tbody=el("ma-tbody");
+  tbody.innerHTML=maCPs.map((cp,i)=>{
+    const r=APP.calcCP(cp,gmm,gsb,pb);
+    return '<tr>'
+      +'<td style="color:var(--acc);font-weight:700">'+(i+1)+'</td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.A||"")+'" oninput="APP.updateMA('+i+','A',this.value)" style="width:80px"></td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.B||"")+'" oninput="APP.updateMA('+i+','B',this.value)" style="width:80px"></td>'
+      +'<td><input type="number" step="0.1" value="'+(cp.C||"")+'" oninput="APP.updateMA('+i+','C',this.value)" style="width:80px"></td>'
+      +'<td style="font-family:monospace">'+(r?fmt(r.Gmb,4):"—")+'</td>'
+      +'<td style="color:'+(r?.Vv!=null?(avalia(r.Vv,proj?.vvMin,proj?.vvMax)==="CONFORME"?"var(--grn)":"var(--red)"):"var(--mut)")+';font-weight:700">'+(r?.Vv!=null?fmt(r.Vv,2)+"%":"—")+'</td>'
+      +'<td style="color:var(--dim)">'+(r?.VAM!=null?fmt(r.VAM,2)+"%":"—")+'</td>'
+      +'<td style="color:'+(r?.RBV!=null?(avalia(r.RBV,proj?.rbvMin,proj?.rbvMax)==="CONFORME"?"var(--grn)":"var(--red)"):"var(--mut)")+';font-weight:700">'+(r?.RBV!=null?fmt(r.RBV,2)+"%":"—")+'</td>'
+      +'<td><input type="number" step="0.01" value="'+(cp.H||"")+'" oninput="APP.updateMA('+i+','H',this.value)" placeholder="6.35" style="width:65px"></td>'
+      +'<td style="color:var(--dim);font-size:10px">'+(r?fmt(r.fator,2):"—")+'</td>'
+      +'<td><input type="number" step="1" value="'+(cp.El||"")+'" oninput="APP.updateMA('+i+','El',this.value)" style="width:75px"></td>'
+      +'<td style="color:'+(r?.Ec!=null?(avalia(r.Ec,proj?.estMin,null)==="CONFORME"?"var(--grn)":"var(--red)"):"var(--mut)")+';font-weight:700;font-size:13px">'+(r?.Ec!=null?fmt(r.Ec,0):"—")+'</td>'
+      +'<td><input type="number" step="0.25" value="'+(cp.flu||"")+'" oninput="APP.updateMA('+i+','flu',this.value)" style="width:70px"></td>'
+      +'</tr>';
+  }).join("");
+  // medias
+  const valid=maCPs.map(cp=>APP.calcCP(cp,gmm,gsb,pb)).filter(r=>r!==null);
+  if(valid.length) {
+    const med=k=>valid.reduce((s,r)=>s+(r[k]||0),0)/valid.length;
+    const mGmb=med("Gmb"),mVv=med("Vv"),mVAM=med("VAM"),mRBV=med("RBV"),mEc=med("Ec"),mFlu=med("flu");
+    el("ma-medias").style.display="block";
+    el("ma-medias-row").innerHTML=[
+      {l:"Gmm",v:fmt(gmm,4),c:"var(--blu)"},
+      {l:"Gmb med",v:fmt(mGmb,4),c:"var(--txt)"},
+      {l:"Vv%",v:fmt(mVv,2)+"%",c:avalia(mVv,proj?.vvMin,proj?.vvMax)==="CONFORME"?"var(--grn)":"var(--red)"},
+      {l:"VAM%",v:fmt(mVAM,2)+"%",c:"var(--dim)"},
+      {l:"RBV%",v:fmt(mRBV,2)+"%",c:avalia(mRBV,proj?.rbvMin,proj?.rbvMax)==="CONFORME"?"var(--grn)":"var(--red)"},
+      {l:"Estab.",v:fmt(mEc,0)+" kgf",c:avalia(mEc,proj?.estMin,null)==="CONFORME"?"var(--grn)":"var(--red)"},
+      {l:"Fluencia",v:fmt(mFlu,2)+" mm",c:"var(--txt)"},
+    ].map(x=>'<div style="background:var(--surf);padding:7px 9px;border-radius:4px;border-left:3px solid '+x.c+'"><div style="font-size:9px;color:var(--mut);margin-bottom:2px">'+x.l+'</div><div style="font-family:monospace;font-size:14px;font-weight:700;color:'+x.c+'">'+x.v+'</div></div>').join("");
+    el("ma-badges-row").innerHTML=[
+      avalia(mVv,proj?.vvMin,proj?.vvMax),
+      avalia(mRBV,proj?.rbvMin,proj?.rbvMax),
+      avalia(mEc,proj?.estMin,null),
+    ].map(s=>badge(s)).join(" ");
+  } else {
+    el("ma-medias").style.display="none";
+  }
+},
+calcCP(cp,gmm,gsb,pb) {
+  const A=nv(cp.A),B=nv(cp.B),C=nv(cp.C);
+  if(!A||!B||!C||C===B) return null;
+  const Gmb=A/(C-B);
+  const Vv=gmm>0?100*(1-Gmb/gmm):null;
+  const Ps=100-pb;
+  const VAM=gsb>0?100-(Gmb*Ps/gsb):null;
+  const RBV=VAM&&Vv!=null&&VAM>0?((VAM-Vv)/VAM)*100:null;
+  const fator=cp.H?getMC(nv(cp.H)):1;
+  const Ec=cp.El?nv(cp.El)*fator:null;
+  return {Gmb,Vv,VAM,RBV,Ec,fator,flu:nv(cp.flu)};
+},
+updateMA(i,k,v){maCPs[i][k]=v;APP.renderMA();},
+addCPMA(){maCPs.push({A:"",B:"",C:"",H:"",El:"",flu:""});APP.renderMA();},
+
+// --- EQUIV AREIA ---
+renderSE() {
+  const proj=projetoAtivo;
+  const seMin=nv(proj?.seMin||55);
+  el("se-tbody").innerHTML=seDets.map((d,i)=>{
+    const se=(nv(d.h1)&&nv(d.h2))?(nv(d.h2)/nv(d.h1))*100:null;
+    return '<tr>'
+      +'<td style="color:var(--acc)">'+(i+1)+'</td>'
+      +'<td><input type="number" step="0.5" value="'+(d.h1||"")+'" oninput="APP.updateSE('+i+','h1',this.value)" style="width:100px"></td>'
+      +'<td><input type="number" step="0.5" value="'+(d.h2||"")+'" oninput="APP.updateSE('+i+','h2',this.value)" style="width:100px"></td>'
+      +'<td style="color:'+(se!=null?(se>=seMin?"var(--grn)":"var(--red)"):"var(--mut)")+';font-weight:700">'+(se!=null?fmt(se,1)+"%":"—")+'</td>'
+      +'<td>'+(se!=null?badge(se>=seMin?"CONFORME":"NAO CONFORME"):"—")+'</td>'
+      +'</tr>';
+  }).join("");
+  const ses=seDets.map(d=>(nv(d.h1)&&nv(d.h2))?(nv(d.h2)/nv(d.h1))*100:null).filter(v=>v!==null);
+  if(ses.length){
+    const med=ses.reduce((a,b)=>a+b,0)/ses.length;
+    const seMin=nv(projetoAtivo?.seMin||55);
+    el("se-media-val").textContent=fmt(med,1)+"%";
+    el("se-media-val").style.color=med>=seMin?"var(--grn)":"var(--red)";
+    el("se-media-badge").innerHTML=badge(med>=seMin?"CONFORME":"NAO CONFORME");
+    el("se-media-box").style.display="block";
+  }else{el("se-media-box").style.display="none";}
+},
+updateSE(i,k,v){seDets[i][k]=v;APP.renderSE();},
+addSE(){seDets.push({h1:"",h2:""});APP.renderSE();},
+
+// --- SALVAR ENSAIO ---
+async salvarEnsaio(tipo) {
+  if(!projetoAtivo){toast("Selecione um projeto primeiro!",true);return;}
+  let dados={}, status="PENDENTE", trecho="", lote="", tec="";
+
+  if(tipo==="extgran") {
+    trecho=el("eg-trecho").value; lote=el("eg-lote").value; tec=el("eg-tec").value;
+    const mmist=nv(el("eg-mmist").value);
+    const retidos=PENS.reduce((s,p)=>s+nv(el("eg-ret-"+p.id)?.value),0);
+    const pb=mmist>0&&retidos>0?((mmist-retidos)/mmist)*100+nv(el("eg-kf").value):null;
+    const teor=nv(projetoAtivo?.teor);
+    const desvio=pb!=null&&teor>0?pb-teor:null;
+    const confCap=desvio!=null?Math.abs(desvio)<=0.3:null;
+    const granRows=PENS.map(p=>{
+      let retAcum=0;
+      PENS.forEach((p2,i2)=>{if(i2<=PENS.indexOf(p))retAcum+=nv(el("eg-ret-"+p2.id)?.value);});
+      const ret=nv(el("eg-ret-"+p.id)?.value);
+      const pP=retidos>0?100-(retAcum/retidos)*100:0;
+      return {id:p.id,lb:p.lb,pP};
+    });
+    const ncPens=granRows.filter(r=>{
+      const fp=projetoAtivo?.faixaProjeto?.[r.id]||{};
+      const lim=FAIXAS_DNIT[projetoAtivo?.faixa||"C-12.5"]?.[PENS.find(p=>p.id===r.id)?.dnit];
+      const mn=fp.min!==""&&fp.min!==undefined?parseFloat(fp.min):(Array.isArray(lim)?lim[0]:null);
+      const mx=fp.max!==""&&fp.max!==undefined?parseFloat(fp.max):(Array.isArray(lim)?lim[1]:typeof lim==="number"?lim:null);
+      return r.id!=="fundo"&&(mn!==null||mx!==null)&&!((mn===null||r.pP>=mn)&&(mx===null||r.pP<=mx));
+    }).length;
+    dados={massaMist:mmist,massaAgg:retidos,pb,desvio,statusCap:confCap==null?"PENDENTE":confCap?"CONFORME":"NAO CONFORME",ncPeneiras:ncPens,granRows};
+    status=confCap===true&&ncPens===0?"CONFORME":confCap===false||ncPens>0?"NAO CONFORME":"PENDENTE";
+  }
+  else if(tipo==="rt") {
+    trecho=el("rt-trecho").value; lote=el("rt-lote").value; tec=el("rt-tec").value;
+    const rts=rtCPs.map(cp=>APP.calcRT(cp)).filter(r=>r!==null);
+    const med=rts.length?rts.reduce((a,b)=>a+b,0)/rts.length:null;
+    const rtMin=nv(projetoAtivo?.rtMin||0.65);
+    dados={nCPs:rtCPs.length,mediaRT:med,minRT:rts.length?Math.min(...rts):null,maxRT:rts.length?Math.max(...rts):null,rtMin,cps:rtCPs.map((cp,i)=>({...cp,rt:APP.calcRT(cp)}))};
+    status=med!=null?(med>=rtMin?"CONFORME":"NAO CONFORME"):"PENDENTE";
+  }
+  else if(tipo==="marshall") {
+    trecho=el("ma-trecho").value; lote=el("ma-lote").value; tec=el("ma-tec").value;
+    const gmm=APP.getGmm();
+    const gsb=nv(el("ma-gsb").value||2.700);
+    const pb=nv(el("ma-pb").value);
+    const valid=maCPs.map(cp=>APP.calcCP(cp,gmm,gsb,pb)).filter(r=>r!==null);
+    const med=k=>valid.length?valid.reduce((s,r)=>s+(r[k]||0),0)/valid.length:null;
+    const proj=projetoAtivo;
+    const mVv=med("Vv"),mRBV=med("RBV"),mEc=med("Ec"),mVAM=med("VAM");
+    dados={gmm,gmb:med("Gmb"),vv:mVv,vam:mVAM,rbv:mRBV,estab:mEc,fluencia:med("flu"),pb};
+    const oks=[avalia(mVv,proj?.vvMin,proj?.vvMax),avalia(mRBV,proj?.rbvMin,proj?.rbvMax),avalia(mEc,proj?.estMin,null)];
+    status=oks.some(s=>s==="NAO CONFORME")?"NAO CONFORME":oks.every(s=>s==="CONFORME")?"CONFORME":"PENDENTE";
+  }
+  else if(tipo==="equiv") {
+    trecho=el("se-trecho").value; lote=el("se-lote").value; tec=el("se-tec").value;
+    const ses=seDets.map(d=>(nv(d.h1)&&nv(d.h2))?(nv(d.h2)/nv(d.h1))*100:null).filter(v=>v!==null);
+    const med=ses.length?ses.reduce((a,b)=>a+b,0)/ses.length:null;
+    const seMin=nv(projetoAtivo?.seMin||55);
+    dados={nAmostras:seDets.length,mediaSE:med,seMin};
+    status=med!=null?(med>=seMin?"CONFORME":"NAO CONFORME"):"PENDENTE";
+  }
+
+  const ensaio={
+    id:uid(),
+    tipo:{extgran:"Extracao+Granulometria",rt:"Resistencia a Tracao",marshall:"Rice+Marshall+Volumetricos",equiv:"Equivalente de Areia"}[tipo]||tipo,
+    projId:projetoAtivo.id,
+    projCodigo:projetoAtivo.codigo,
+    projNome:projetoAtivo.nome,
+    trecho,lote,tecnico:tec,
+    data:new Date().toISOString(),
+    savedAt:new Date().toISOString(),
+    status,dados
+  };
+  try {
+    const btn=el("btn-salvar-"+tipo)||el("btn-salvar-eg");
+    if(btn){btn.textContent="Salvando...";btn.disabled=true;}
+    await saveEnsaio(ensaio);
+    ensaios.push(ensaio);
+    if(btn){btn.textContent="Salvo!";setTimeout(()=>{btn.textContent="Salvar Resultado";btn.disabled=false;},2000);}
+    toast("Resultado salvo com sucesso!");
+  } catch(e) {
+    toast("Erro ao salvar: "+e.message,true);
+    console.error(e);
+  }
+},
+
+// --- CONTROLE ESTATISTICO ---
+carregarEstat() {
+  const projFiltro=el("es-proj-sel")?.value||"todos";
+  const dtIni=el("es-ini")?.value;
+  const dtFim=el("es-fim")?.value;
+  const projSel=projetos.find(p=>p.id===projFiltro);
+  el("es-titulo").textContent="Controle Estatistico"+(projSel?" - "+projSel.codigo:"")+" | Anexo A DNIT 031/2024";
+
+  const linhas=ensaios.filter(e=>{
+    const pOk=projFiltro==="todos"||e.projId===projFiltro;
+    const hasData=e.dados&&(e.dados.gmb!=null||e.dados.pb!=null||e.dados.mediaRT!=null||e.dados.mediaSE!=null);
+    const d=new Date(e.data||e.savedAt);
+    const diOk=!dtIni||d>=new Date(dtIni+"T00:00:00");
+    const dfOk=!dtFim||d<=new Date(dtFim+"T23:59:59");
+    return pOk&&hasData&&diOk&&dfOk;
+  }).sort((a,b)=>new Date(a.data||a.savedAt)-new Date(b.data||b.savedAt));
+
+  if(!linhas.length){
+    el("es-thead").innerHTML="";
+    el("es-tbody").innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--mut);padding:20px">Nenhum ensaio encontrado para os filtros selecionados.</td></tr>';
+    el("es-tfoot").innerHTML="";
+    return;
+  }
+
+  // Colunas de dados
+  const COLS=[
+    {id:"pb",   lb:"Betume%",  d:2, get:e=>e.dados?.pb,   mn:null,mx:null},
+    {id:"gmm",  lb:"Gmm",      d:4, get:e=>e.dados?.gmm,  mn:null,mx:null},
+    {id:"gmb",  lb:"Gmb",      d:4, get:e=>e.dados?.gmb,  mn:null,mx:null},
+    {id:"vv",   lb:"Vv%",      d:2, get:e=>e.dados?.vv,   mn:projSel?.vvMin,mx:projSel?.vvMax},
+    {id:"vam",  lb:"VAM%",     d:2, get:e=>e.dados?.vam,  mn:projSel?.vamMin,mx:null},
+    {id:"rbv",  lb:"RBV%",     d:2, get:e=>e.dados?.rbv,  mn:projSel?.rbvMin,mx:projSel?.rbvMax},
+    {id:"estab",lb:"Est.(kgf)",d:0, get:e=>e.dados?.estab,mn:projSel?.estMin,mx:null},
+    {id:"flu",  lb:"Flu.(mm)", d:2, get:e=>e.dados?.fluencia,mn:null,mx:null},
+    {id:"rt",   lb:"RT(MPa)",  d:3, get:e=>e.dados?.mediaRT,mn:projSel?.rtMin,mx:null},
+    {id:"se",   lb:"SE%",      d:1, get:e=>e.dados?.mediaSE,mn:projSel?.seMin,mx:null},
+  ].map(c=>({...c,vals:linhas.map(e=>{const v=c.get(e);return v!=null?parseFloat(v):null;})}))
+   .filter(c=>c.vals.some(v=>v!==null));
+
+  // Estatistica
+  const estatCol=c=>{
+    const v=c.vals.filter(x=>x!==null);
+    if(!v.length) return {n:0,med:null,sd:null,k:null,xmin:null,xmax:null};
+    const n=v.length,med=v.reduce((a,b)=>a+b,0)/n;
+    const sd=n>1?Math.sqrt(v.map(x=>(x-med)**2).reduce((a,b)=>a+b,0)/(n-1)):0;
+    const k=getK(n);
+    return {n,med,sd,k,xmin:med-k*sd,xmax:med+k*sd};
+  };
+  const stats=COLS.map(c=>estatCol(c));
+
+  // Header
+  el("es-thead").innerHTML='<tr><th style="text-align:left">Data</th><th>Tecnico</th>'
+    +COLS.map(c=>'<th>'+c.lb+'</th>').join("")+'</tr>';
+
+  // Linhas de dados
+  el("es-tbody").innerHTML=linhas.map((e,i)=>{
+    const bg=i%2===0?"":"background:var(--surf)20";
+    return '<tr style="'+bg+'">'
+      +'<td style="color:var(--txt);font-weight:600;white-space:nowrap">'+dStr(e.data||e.savedAt)+'</td>'
+      +'<td style="color:var(--dim)">'+(e.tecnico||"—")+'</td>'
+      +COLS.map(c=>{
+        const v=c.get(e);const vn=v!=null?parseFloat(v):null;
+        const ok=vn!=null?avalia(vn,c.mn,c.mx):null;
+        return '<td style="color:'+(ok==="NAO CONFORME"?"var(--red)":ok==="CONFORME"?"var(--grn)":"var(--txt)")+';font-weight:'+(ok==="NAO CONFORME"?"700":"400")+'">'+(vn!=null?fmt(vn,c.d):"—")+'</td>';
+      }).join("")
+      +'</tr>';
+  }).join("");
+
+  // Rodape estatistico
+  const statRows=[
+    {lb:"N",fn:(s,i)=>s.n,bg:"#0a1428"},
+    {lb:"Media X-med",fn:(s,i)=>s.med!=null?fmt(s.med,3):"—",bg:"#0a280a"},
+    {lb:"Desv. Pad. S",fn:(s,i)=>s.sd!=null?fmt(s.sd,3):"—",bg:"#28280a"},
+    {lb:"k (Tab.A1)",fn:(s,i)=>s.k!=null?fmt(s.k,2):"—",bg:"#28280a"},
+    {lb:"X-med + k.S",fn:(s,i)=>s.xmax!=null?fmt(s.xmax,3):"—",bg:"#280a0a"},
+    {lb:"X-med - k.S",fn:(s,i)=>s.xmin!=null?fmt(s.xmin,3):"—",bg:"#280a0a"},
+    {lb:"Lim. Superior",fn:(s,c)=>c.mx!=null?fmt(c.mx,c.d):"—",bg:"#0a2808"},
+    {lb:"Lim. Inferior",fn:(s,c)=>c.mn!=null?fmt(c.mn,c.d):"—",bg:"#0a2808"},
+  ];
+  el("es-tfoot").innerHTML=statRows.map(r=>{
+    return '<tr style="background:'+r.bg+'">'
+      +'<td colspan="2" style="font-weight:700;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">'+r.lb+'</td>'
+      +COLS.map((c,i)=>{
+        const s=stats[i];
+        const val=r.fn(s,c);
+        return '<td style="font-weight:700">'+val+'</td>';
+      }).join("")
+      +'</tr>';
+  }).join("")
+  // OBS row
+  +'<tr style="background:#1a3a6a">'
+  +'<td colspan="2" style="font-weight:800;font-size:10px;color:#fff">OBS:</td>'
+  +COLS.map((c,i)=>{
+    const s=stats[i];
+    if(s.xmin===null&&s.xmax===null) return '<td style="color:#aaa">—</td>';
+    const ok=(c.mn===null||c.mn===undefined||s.xmin>=parseFloat(c.mn))&&(c.mx===null||c.mx===undefined||s.xmax<=parseFloat(c.mx));
+    return '<td style="background:'+(ok?"#1a7a43":"#7a1a1a")+';color:#fff;font-weight:700;font-size:10px">'+(ok?"APROVADO":"REPROVADO")+'</td>';
+  }).join("")
+  +'</tr>';
+},
+
+// --- RELATORIO ---
+carregarRelatorio() {
+  const projFiltro=el("rel-proj")?.value||"todos";
+  const dtIni=el("rel-ini")?.value;
+  const dtFim=el("rel-fim")?.value;
+  const projSel=projetos.find(p=>p.id===projFiltro);
+
+  if(projSel) {
+    el("rel-tec").value=projSel.resp||"";
+    el("rel-eng").value=projSel.eng||"";
+    el("rel-crea").value=projSel.crea||"";
+  }
+
+  const filtrados=ensaios.filter(e=>{
+    const pOk=projFiltro==="todos"||e.projId===projFiltro;
+    const d=new Date(e.data||e.savedAt);
+    const diOk=!dtIni||d>=new Date(dtIni+"T00:00:00");
+    const dfOk=!dtFim||d<=new Date(dtFim+"T23:59:59");
+    return pOk&&diOk&&dfOk;
+  }).sort((a,b)=>new Date(a.data||a.savedAt)-new Date(b.data||b.savedAt));
+
+  const total=filtrados.length;
+  const conf=filtrados.filter(e=>e.status==="CONFORME").length;
+  const nc=filtrados.filter(e=>e.status==="NAO CONFORME").length;
+  const pct=total?Math.round((conf/total)*100):0;
+
+  el("rel-titulo").textContent="Relatorio"+(projSel?" - "+projSel.codigo:"")+" ("+total+" ensaios)";
+  el("rel-kpis").innerHTML=[
+    {l:"Total",v:total,c:"var(--txt)"},
+    {l:"Conformes",v:conf,c:"var(--grn)"},
+    {l:"Nao Conf.",v:nc,c:nc>0?"var(--red)":"var(--mut)"},
+    {l:"% Conf.",v:pct+"%",c:pct>=90?"var(--grn)":pct>=70?"var(--acc)":"var(--red)"},
+    {l:"Pendentes",v:total-conf-nc,c:"var(--acc)"},
+  ].map(x=>'<div style="background:var(--card);padding:8px;border-radius:4px;text-align:center;border:1px solid var(--bord)"><div style="font-size:9px;color:var(--mut);margin-bottom:2px">'+x.l+'</div><div style="font-family:monospace;font-size:18px;font-weight:700;color:'+x.c+'">'+x.v+'</div></div>').join("");
+
+  el("rel-tbody").innerHTML=filtrados.map(e=>{
+    return '<tr>'
+      +'<td style="color:var(--txt);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.tipo+'</td>'
+      +'<td style="color:var(--acc)">'+e.projCodigo+'</td>'
+      +'<td style="color:var(--dim);white-space:nowrap">'+dStr(e.data||e.savedAt)+'</td>'
+      +'<td>'+( e.trecho||"—")+'</td>'
+      +'<td>'+(e.tecnico||"—")+'</td>'
+      +'<td>'+badge(e.status)+'</td>'
+      +'</tr>';
+  }).join("") || '<tr><td colspan="6" style="text-align:center;color:var(--mut);padding:20px">Nenhum ensaio encontrado.</td></tr>';
+},
+
+gerarPDFRelatorio() {
+  const projFiltro=el("rel-proj")?.value||"todos";
+  const dtIni=el("rel-ini")?.value;
+  const dtFim=el("rel-fim")?.value;
+  const projSel=projetos.find(p=>p.id===projFiltro);
+  const tec=el("rel-tec")?.value||"";
+  const eng=el("rel-eng")?.value||"";
+  const crea=el("rel-crea")?.value||"";
+  const fiscal=el("rel-fiscal")?.value||"";
+  const obs=el("rel-obs")?.value||"";
+
+  const filtrados=ensaios.filter(e=>{
+    const pOk=projFiltro==="todos"||e.projId===projFiltro;
+    const d=new Date(e.data||e.savedAt);
+    const diOk=!dtIni||d>=new Date(dtIni+"T00:00:00");
+    const dfOk=!dtFim||d<=new Date(dtFim+"T23:59:59");
+    return pOk&&diOk&&dfOk;
+  }).sort((a,b)=>new Date(a.data||a.savedAt)-new Date(b.data||b.savedAt));
+
+  const conf=filtrados.filter(e=>e.status==="CONFORME").length;
+  const nc=filtrados.filter(e=>e.status==="NAO CONFORME").length;
+  const total=filtrados.length;
+  const pct=total?Math.round((conf/total)*100):0;
+
+  const w=window.open("","_blank","width=1100,height=800");
+  if(!w){alert("Permita popups.");return;}
+
+  w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">');
+  w.document.write('<title>Relatorio - '+(projSel?.codigo||"Todos")+'</title>');
+  w.document.write('<style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:7pt}table{border-collapse:collapse;width:100%}th,td{padding:2px 5px;border:0.5px solid #ddd;font-size:6.5pt}th{background:#1a3a6a;color:#fff}tr:nth-child(even) td{background:#f5f8ff}.hdr{background:#1a3a6a;color:#fff;padding:6px 10px;margin-bottom:4px}.kpi{display:inline-block;padding:6px 12px;border:1px solid #ccc;margin:0 6px 6px 0;text-align:center;border-radius:4px}.sig{display:flex;gap:16px;margin-top:12px;border-top:1px solid #1a3a6a;padding-top:6px}.sc{flex:1;font-size:6pt}.sl{border-bottom:1px solid #555;height:14px;margin-bottom:2px}@media print{button{display:none}}</style>');
+  w.document.write('</head><body>');
+
+  w.document.write('<div class="hdr"><strong style="font-size:10pt">RELATORIO DE CONTROLE TECNOLOGICO - LABORATORIO DE ASFALTO</strong><br>');
+  w.document.write('<span style="font-size:6pt;opacity:.8">DNIT 031/2024-ES . Concreto Asfaltico Usinado a Quente . SGLAA . Emitido: '+new Date().toLocaleString("pt-BR")+'</span></div>');
+
+  w.document.write('<table style="margin-bottom:6px;font-size:6.5pt"><tr>');
+  w.document.write('<td><b>Projeto:</b> '+(projSel?.codigo||"Todos")+'</td>');
+  w.document.write('<td><b>Denominacao:</b> '+(projSel?.nome||"—")+'</td>');
+  w.document.write('<td><b>CAP:</b> '+(projSel?.capTipo||"—")+' . Teor: '+(projSel?.teor||"—")+'%</td>');
+  w.document.write('<td><b>Faixa:</b> '+(projSel?.faixaDNIT||projSel?.faixa||"—")+'</td>');
+  w.document.write('</tr><tr>');
+  w.document.write('<td><b>Tecnico:</b> '+tec+'</td>');
+  w.document.write('<td><b>Engenheiro:</b> '+eng+' CREA: '+crea+'</td>');
+  w.document.write('<td><b>Fiscal:</b> '+fiscal+'</td>');
+  w.document.write('<td><b>Periodo:</b> '+(dtIni||"inicio")+' a '+(dtFim||"atual")+'</td>');
+  w.document.write('</tr></table>');
+
+  w.document.write('<div style="margin:6px 0">');
+  w.document.write('<span class="kpi"><strong style="font-size:14pt">'+total+'</strong><br><small>Total</small></span>');
+  w.document.write('<span class="kpi" style="border-color:#1a7a43;color:#1a7a43"><strong style="font-size:14pt">'+conf+'</strong><br><small>Conformes</small></span>');
+  w.document.write('<span class="kpi" style="border-color:#7a1a1a;color:#7a1a1a"><strong style="font-size:14pt">'+nc+'</strong><br><small>Nao Conf.</small></span>');
+  w.document.write('<span class="kpi" style="border-color:'+(pct>=90?"#1a7a43":pct>=70?"#b07010":"#7a1a1a")+'"><strong style="font-size:14pt">'+pct+'%</strong><br><small>Conformidade</small></span>');
+  w.document.write('</div>');
+
+  // Tabela resultados
+  w.document.write('<table><thead><tr><th>Tipo de Ensaio</th><th>Projeto</th><th>Data</th><th>Trecho</th><th>Lote</th><th>Tecnico</th><th>Status</th></tr></thead><tbody>');
+  filtrados.forEach((e,i)=>{
+    const bg=i%2===0?"#fff":"#f5f8ff";
+    const sc=e.status==="CONFORME"?"#1a7a43":e.status==="NAO CONFORME"?"#7a1a1a":"#6a5000";
+    w.document.write('<tr style="background:'+bg+'">');
+    w.document.write('<td>'+e.tipo+'</td>');
+    w.document.write('<td style="color:#1a3a6a;font-weight:700">'+e.projCodigo+'</td>');
+    w.document.write('<td style="white-space:nowrap">'+dStr(e.data||e.savedAt)+'</td>');
+    w.document.write('<td>'+(e.trecho||"—")+'</td>');
+    w.document.write('<td>'+(e.lote||"—")+'</td>');
+    w.document.write('<td>'+(e.tecnico||"—")+'</td>');
+    w.document.write('<td style="background:'+sc+';color:#fff;font-weight:700;font-size:6pt">'+e.status+'</td>');
+    w.document.write('</tr>');
+  });
+  w.document.write('</tbody></table>');
+
+  if(obs) {
+    w.document.write('<div style="margin-top:6px;padding:5px 8px;border:0.5px solid #ccc;font-size:6.5pt"><b>Observacoes:</b> '+obs+'</div>');
+  }
+
+  w.document.write('<div class="sig">');
+  w.document.write('<div class="sc"><div class="sl"></div>Tecnico de Laboratorio<br><strong>'+tec+'</strong></div>');
+  w.document.write('<div class="sc"><div class="sl"></div>Engenheiro Responsavel<br><strong>'+eng+'</strong><br>CREA: '+crea+'</div>');
+  w.document.write('<div class="sc"><div class="sl"></div>Fiscal / DNIT<br><strong>'+fiscal+'</strong></div>');
+  w.document.write('<div class="sc" style="text-align:right"><b>Projeto:</b> '+(projSel?.codigo||"—")+'<br><b>Periodo:</b> '+(dtIni||"inicio")+' a '+(dtFim||"atual")+'<br><b>Emissao:</b> '+new Date().toLocaleDateString("pt-BR")+'</div>');
+  w.document.write('</div>');
+  w.document.write('<div style="font-size:5pt;color:#aaa;text-align:right;margin-top:4px">SGLAA - Sistema de Gerenciamento Laboratorial de Asfalto . DNIT 031/2024-ES</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(()=>w.print(),400);
+},
+
+gerarPDFEstat() {
+  APP.carregarEstat(); // re-render
+  window.print();
+},
+
+}; // end APP
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  try {
+    await loadAll();
+    // Setar data/hora nos inputs
+    const now = nowStr();
+    ["eg-data","rt-data","ma-data"].forEach(id=>{ if(el(id)) el(id).value=now; });
+
+    // Render inicial
+    APP.renderProjetos();
+    APP.renderFormFaixa();
+    APP.renderGranPeneiras();
+
+    // RT - 3 CPs iniciais
+    rtCPs=[{F:"",D:"10.16",H:""},{F:"",D:"10.16",H:""},{F:"",D:"10.16",H:""}];
+    APP.renderRT();
+
+    // Marshall - 3 CPs
+    maCPs=[{A:"",B:"",C:"",H:"",El:"",flu:""},{A:"",B:"",C:"",H:"",El:"",flu:""},{A:"",B:"",C:"",H:"",El:"",flu:""}];
+    APP.renderMA();
+
+    // SE - 3 amostras
+    seDets=[{h1:"",h2:""},{h1:"",h2:""},{h1:"",h2:""}];
+    APP.renderSE();
+
+    // Listeners para calculos automaticos
+    el("ri-A").addEventListener("input",APP.calcGmm);
+    el("ri-B").addEventListener("input",APP.calcGmm);
+    el("ri-C").addEventListener("input",APP.calcGmm);
+    el("ri-T").addEventListener("input",APP.calcGmm);
+    el("eg-mmist").addEventListener("input",APP.calcGran);
+    el("eg-kf").addEventListener("input",APP.calcGran);
+    el("fp-faixa").addEventListener("change",APP.renderFormFaixa);
+    el("ma-pb").addEventListener("input",()=>APP.renderMA());
+    el("ma-gsb").addEventListener("input",()=>APP.renderMA());
+    el("ma-gmm-manual").addEventListener("input",()=>APP.renderMA());
+
+    // Auto-reload a cada 30s
+    setInterval(async()=>{
+      await loadAll();
+      APP.renderProjetos();
+    }, 30000);
+
+    // Esconder loading
+    el("loading").style.display="none";
+    if(projetos.length) el("proj-bar").style.display="none";
+
+  } catch(e) {
+    console.error("Init error:",e);
+    el("loading").innerHTML='<div style="color:var(--red);padding:30px;text-align:center"><div style="font-size:24px;margin-bottom:10px">Erro ao conectar</div><div style="font-size:12px;color:var(--mut)">'+e.message+'</div><button onclick="location.reload()" style="margin-top:16px;background:var(--acc);color:var(--bg);padding:8px 20px;border-radius:4px;border:none;cursor:pointer;font-weight:700">Tentar novamente</button></div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
