@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#070D14"/>
+  <title>SGLAA – Laboratório de Asfalto</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#070D14;color:#C0D8F0;font-family:sans-serif;}
+    #root{min-height:100vh;}
+    #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#070D14;color:#F0A020;}
+    .logo{font-size:32px;font-weight:800;letter-spacing:.08em;margin-bottom:12px;}
+    .sub{font-size:13px;color:#6A90B0;margin-bottom:30px;text-align:center;}
+    .spinner{width:36px;height:36px;border:3px solid #182840;border-top-color:#F0A020;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+<div id="loading">
+  <div class="logo">SGLAA</div>
+  <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto<br/>DNIT 031/2024-ES</div>
+  <div class="spinner"></div>
+</div>
+<div id="root" style="display:none;"></div>
+
+<!-- React 18 -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- Babel -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Firebase via module shim -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  window.firebaseApp = { initializeApp };
+  window.firebaseFirestore = { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, orderBy };
+  // Signal ready
+  document.dispatchEvent(new Event("fb-ready"));
+</script>
+
+<script>
+document.addEventListener("fb-ready", function() {
+  // Now compile and run the JSX
+  try {
+    const code = document.getElementById("jsx-src").textContent;
+    const compiled = Babel.transform(code, {presets:["react"]}).code;
+    const fn = new Function(compiled);
+    fn();
+    document.getElementById("root").style.display = "block";
+    document.getElementById("loading").style.display = "none";
+  } catch(e) {
+    document.getElementById("loading").innerHTML =
+      '<div style="color:#e74c3c;padding:20px;text-align:center;"><div style="font-size:24px;margin-bottom:10px;">⚠</div><div style="font-size:14px;font-weight:700;margin-bottom:8px;">Erro ao carregar</div><div style="font-size:11px;color:#8B949E;max-width:400px;">'+e.message+'</div></div>';
+    console.error(e);
+  }
+});
+// Timeout
+setTimeout(()=>{
+  if(document.getElementById("loading").style.display!=="none"){
+    document.getElementById("loading").innerHTML='<div style="color:#e74c3c;padding:30px;text-align:center;font-family:sans-serif;"><div style="font-size:20px;margin-bottom:8px;">⚠ Erro de conexão</div><div style="font-size:12px;color:#8B949E;">Verifique sua internet e recarregue a página</div></div>';
+  }
+},20000);
+</script>
+
+<script type="text/plain" id="jsx-src">
+
+const { useState, useEffect, useCallback } = React;
+const { initializeApp } = window.firebaseApp;
+const { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, orderBy } = window.firebaseFirestore;
+
+// ── Firebase Config – Sgq-Asfalto ────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCvYQYm9vZpkZ2tKMm-4zouYoI71Wb9ldc",
+  authDomain: "sgq-asfalto.firebaseapp.com",
+  projectId: "sgq-asfalto",
+  storageBucket: "sgq-asfalto.firebasestorage.app",
+  messagingSenderId: "159792875402",
+  appId: "1:159792875402:web:e54a3e554bdfa736226a73"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SGLAA v3 – Sistema de Gerenciamento Laboratorial de Asfalto
+   DNIT 031/2024-ES | Projetos de Mistura + Ensaios com cálculo automático
+   Projetos de dosagem cadastráveis · Faixa de trabalho por projeto
+   Extração→Granulometria · RT · Rice→Marshall→Volumétricos · Equiv.Areia
+═══════════════════════════════════════════════════════════════════════ */
+
+const T={
+  bg:"#070D14",surface:"#0C1520",card:"#101E2E",border:"#182840",
+  accent:"#F0A020",accentD:"#B07010",
+  green:"#2ECC71",greenB:"#0A2A18",
+  red:"#E74C3C",redB:"#2A0A0A",
+  blue:"#3498DB",blueB:"#081828",
+  orange:"#E67E22",orangeB:"#281408",
+  purple:"#9B59B6",
+  muted:"#3A5878",text:"#C0D8F0",dim:"#6A90B0",white:"#FFFFFF",
+};
+
+const CSS=`
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700;800&family=Share+Tech+Mono&family=Nunito:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:${T.bg};color:${T.text};font-family:'Nunito',sans-serif;min-height:100vh;}
+input,select,textarea{font-family:'Share Tech Mono',monospace;background:${T.surface};color:${T.text};border:1px solid ${T.border};border-radius:4px;padding:5px 8px;width:100%;font-size:11px;outline:none;transition:border .15s;}
+input:focus,select:focus,textarea:focus{border-color:${T.accent};box-shadow:0 0 0 2px ${T.accent}18;}
+input[type=number]::-webkit-inner-spin-button{opacity:.4;}
+select option{background:${T.surface};}
+label{font-size:9px;font-weight:700;color:${T.muted};text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:2px;}
+button{cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;border:none;border-radius:4px;transition:all .15s;letter-spacing:.04em;}
+button:hover:not(:disabled){filter:brightness(1.12);}
+::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:${T.bg};}::-webkit-scrollbar-thumb{background:${T.border};border-radius:2px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.fade{animation:fadeUp .22s ease both;}
+table{border-collapse:collapse;width:100%;}
+th{background:${T.surface};color:${T.muted};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:5px 7px;text-align:left;border-bottom:1px solid ${T.border};white-space:nowrap;}
+td{padding:5px 7px;border-bottom:1px solid ${T.border}15;font-size:11px;}
+tr:hover td{background:${T.surface}28;}
+.badge{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.04em;}
+.conf{background:${T.greenB};color:${T.green};}
+.nconf{background:${T.redB};color:${T.red};}
+.pend{background:#181808;color:${T.accent};}
+`;
+
+// ── Firestore helpers ────────────────────────────────────────────────
+const SK={proj:'sglaa_projetos_v1',ens:'sglaa_ensaios_v2'};
+// Projetos: coleção "projetos" — cada doc = um projeto
+// Ensaios:  coleção "ensaios"  — cada doc = um ensaio
+
+async function sg(key) {
+  try {
+    if (key === "sglaa_projetos_v1") {
+      const snap = await getDocs(collection(db, "projetos"));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    if (key === "sglaa_ensaios_v2") {
+      const snap = await getDocs(collection(db, "ensaios"));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    return null;
+  } catch(e) { console.error("sg error",e); return null; }
+}
+
+async function ss(key, value) {
+  try {
+    if (key === "sglaa_projetos_v1") {
+      // value é array de projetos — salva/atualiza cada um pelo id
+      const arr = Array.isArray(value) ? value : [];
+      for (const p of arr) {
+        await setDoc(doc(db, "projetos", p.id), p);
+      }
+      // Remove projetos que foram deletados (não estão mais no array)
+      const snap = await getDocs(collection(db, "projetos"));
+      const ids = arr.map(p => p.id);
+      for (const d of snap.docs) {
+        if (!ids.includes(d.id)) await deleteDoc(doc(db, "projetos", d.id));
+      }
+    }
+  } catch(e) { console.error("ss error",e); }
+}
+
+async function saveEnsaio(ens) {
+  try {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+    const entry = { ...ens, id, savedAt: new Date().toISOString(), data: new Date().toISOString() };
+    await setDoc(doc(db, "ensaios", id), entry);
+  } catch(e) { console.error("saveEnsaio error",e); throw e; }
+}
+
+async function delEnsaio(id) {
+  try {
+    await deleteDoc(doc(db, "ensaios", id));
+  } catch(e) { console.error("delEnsaio error",e); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const nv=v=>parseFloat(v)||0;
+const fmt=(v,d=2)=>(v===null||v===undefined||v===""||isNaN(v))?"—":Number(v).toFixed(d);
+const now=()=>new Date().toLocaleString("pt-BR");
+
+// ── Peneiras série DNIT 412 ───────────────────────────────────────────
+const PEN=[
+  {id:"p38",  mm:38.1,  lb:'1½"  38,1mm', dnit:"pen38"},
+  {id:"p25",  mm:25.4,  lb:'1"   25,4mm', dnit:"pen25"},
+  {id:"p19",  mm:19.1,  lb:'¾"   19,1mm', dnit:"pen19"},
+  {id:"p127", mm:12.7,  lb:'½"   12,7mm', dnit:"pen127"},
+  {id:"p95",  mm:9.5,   lb:'⅜"    9,5mm', dnit:"pen95"},
+  {id:"p63",  mm:6.3,   lb:'¼"    6,3mm', dnit:"pen63"},
+  {id:"p48",  mm:4.8,   lb:'Nº4   4,8mm', dnit:"pen48"},
+  {id:"p236", mm:2.36,  lb:'Nº8   2,36mm',dnit:"pen236"},
+  {id:"p118", mm:1.18,  lb:'Nº16  1,18mm',dnit:"pen118"},
+  {id:"p060", mm:0.60,  lb:'Nº30  0,60mm',dnit:"pen060"},
+  {id:"p030", mm:0.30,  lb:'Nº50  0,30mm',dnit:"pen030"},
+  {id:"p015", mm:0.15,  lb:'Nº100 0,15mm',dnit:"pen015"},
+  {id:"p0075",mm:0.075, lb:'Nº200 0,075mm',dnit:"pen0075"},
+  {id:"fundo",mm:0,     lb:'Fundo',        dnit:"fundo"},
+];
+
+// Faixas DNIT 031/2024 Tabela 1 (referência; projeto pode ter própria faixa)
+const FAIXAS_DNIT={
+  "B-19":{pen25:100,pen19:[90,100],pen127:[70,89],pen95:[55,82],pen63:[42,70],pen48:[35,63],pen236:[23,49],pen118:[16,37],pen060:[10,28],pen030:[6,20],pen015:[4,13],pen0075:[2,8]},
+  "C-12.5":{pen19:100,pen127:[90,100],pen95:[73,89],pen63:[53,78],pen48:[44,72],pen236:[28,58],pen118:[17,45],pen060:[11,35],pen030:[6,25],pen015:[3,17],pen0075:[2,10]},
+  "A-25":{pen38:100,pen25:[90,100],pen19:[75,89],pen127:[58,78],pen95:[48,71],pen63:[35,61],pen48:[29,55],pen236:[19,45],pen118:[13,36],pen060:[9,28],pen030:[5,21],pen015:[2,14],pen0075:[1,7]},
+  "D-9.5":{pen127:100,pen95:[90,100],pen63:[65,89],pen48:[53,83],pen236:[32,67],pen118:[20,52],pen060:[13,40],pen030:[8,29],pen015:[4,19],pen0075:[2,10]},
+};
+
+// Tabela correção Marshall
+const MC={"5.08":1.19,"5.40":1.14,"5.72":1.09,"6.03":1.04,"6.35":1.00,"6.67":0.96,"6.99":0.93,"7.30":0.89,"7.62":0.86};
+const getMC=h=>{const keys=Object.keys(MC).map(Number).sort((a,b)=>a-b);let b=keys[0],bd=Math.abs(h-keys[0]);for(const k of keys){const d=Math.abs(h-k);if(d<bd){bd=d;b=k;}}return MC[b.toFixed(2)]||1;};
+
+// Densidades água para Rice
+const DW={15:0.99913,20:0.99820,21:0.99799,22:0.99777,23:0.99754,24:0.99730,25:0.99705,26:0.99678,27:0.99651,28:0.99623,29:0.99595,30:0.99565,31:0.99534,32:0.99503,33:0.99470,34:0.99437,35:0.99403};
+const getDW=t=>{const k=Math.round(nv(t)||25);return DW[k]||(k<15?DW[15]:DW[35]);};
+
+// ── Projeto vazio template ────────────────────────────────────────────
+const PROJ_EMPTY=()=>({
+  id:uid(),
+  // Identificação
+  codigo:"",nome:"",cliente:"",responsavel:"",engResp:"",crea:"",data:"",
+  // CAP
+  capTipo:"CAP 50/70",capFornecedor:"",
+  // Materiais e composição
+  materiais:[{nome:"Brita 1",fornecedor:"",pct:""},{nome:"Brita 0",fornecedor:"",pct:""},{nome:"Pó de Pedra",fornecedor:"",pct:""},{nome:"Cal",fornecedor:"",pct:""}],
+  // Teor CAP
+  teorcapOtimo:"",
+  // Densidades
+  densMax:"",       // Gmm Rice
+  densAparComb:"",  // Gsb
+  densEfComb:"",    // Gse
+  densEfRice:"",    // Gse Rice
+  densBulk:"",      // Gmb ótimo
+  // Parâmetros volumétricos — limites min/max
+  va_min:"3.0",va_max:"5.0",
+  rbv_min:"65.0",rbv_max:"78.0",
+  vam_min:"13.0",vam_max:"",
+  // Parâmetros estruturais — limites
+  estab_min:"500",estab_max:"",
+  fluencia_min:"",fluencia_max:"",
+  rt_min:"0.65",rt_max:"",
+  eq_areia_min:"55",
+  abrasao_max:"50",
+  indice_forma_min:"0.5",
+  // Temperaturas
+  tmist_min:"150",tmist_max:"160",
+  tcomp_min:"145",tcomp_max:"155",
+  // Faixa granulométrica — limites próprios por peneira (min/max % passante)
+  faixaDNIT:"B-19",   // faixa DNIT base
+  usarFaixaProjeto:true,
+  faixaProjeto:{},    // {p38:{min,max}, p25:{min,max}, ...}
+  obs:"",
+});
+
+// ── Componentes base ──────────────────────────────────────────────────
+const Card=({children,style={}})=>(
+  <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:8,padding:14,...style}}>{children}</div>
+);
+const ST=({c=T.muted,children,mb=10,size=10})=>(
+  <div style={{fontSize:size,fontWeight:800,color:c,textTransform:"uppercase",letterSpacing:".1em",marginBottom:mb,fontFamily:"'Rajdhani',sans-serif"}}>{children}</div>
+);
+const FL=({label,children,w="100%",style={}})=>(
+  <div style={{marginBottom:7,width:w,...style}}><label>{label}</label>{children}</div>
+);
+const Row=({children,gap=8})=>(<div style={{display:"flex",gap,flexWrap:"wrap",alignItems:"flex-start"}}>{children}</div>);
+const Btn=({children,onClick,bg=T.accent,tc=T.bg,style={},sm=false,disabled=false})=>(
+  <button onClick={onClick} disabled={disabled} style={{background:disabled?"#222":bg,color:disabled?T.muted:tc,padding:sm?"4px 10px":"8px 16px",fontSize:sm?11:13,...style}}>{children}</button>
+);
+const Sb=({s})=>{
+  const m={ok:{c:"conf",l:"✓ CONF."},nc:{c:"nconf",l:"✗ NC"},pend:{c:"pend",l:"◌ PEND"}};
+  const x=m[s]||m.pend;
+  return <span className={`badge ${x.c}`}>{x.l}</span>;
+};
+const Divider=({label})=>(
+  <div style={{display:"flex",alignItems:"center",gap:8,margin:"12px 0 8px"}}>
+    <div style={{flex:1,height:1,background:T.border}}/>
+    {label&&<span style={{fontSize:9,color:T.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",whiteSpace:"nowrap"}}>{label}</span>}
+    <div style={{flex:1,height:1,background:T.border}}/>
+  </div>
+);
+
+function avalia(v,min,max){
+  const vn=parseFloat(v);
+  if(isNaN(vn)||v===""||v===null) return "pend";
+  if(min!==""&&min!==null&&min!==undefined&&vn<parseFloat(min)) return "nc";
+  if(max!==""&&max!==null&&max!==undefined&&vn>parseFloat(max)) return "nc";
+  return "ok";
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CADASTRO / EDIÇÃO DE PROJETO DE MISTURA
+// ══════════════════════════════════════════════════════════════════════
+function CadastroProjeto({proj:initial,onSalvar,onCancelar}){
+  const [p,setP]=useState(initial||PROJ_EMPTY());
+  const set=(k,v)=>setP(x=>({...x,[k]:v}));
+  const setMat=(i,k,v)=>setP(x=>{const m=[...x.materiais];m[i]={...m[i],[k]:v};return {...x,materiais:m};});
+  const addMat=()=>setP(x=>({...x,materiais:[...x.materiais,{nome:"",fornecedor:"",pct:""}]}));
+  const remMat=i=>setP(x=>({...x,materiais:x.materiais.filter((_,j)=>j!==i)}));
+  const setFaixa=(id,k,v)=>setP(x=>({...x,faixaProjeto:{...x.faixaProjeto,[id]:{...(x.faixaProjeto[id]||{}),[k]:v}}}));
+
+  const somaMatPerc=p.materiais.reduce((s,m)=>s+nv(m.pct),0)+nv(p.teorcapOtimo);
+
+  return(
+    <div style={{maxWidth:900,margin:"0 auto"}} className="fade">
+      {/* Cabeçalho */}
+      <div style={{background:`linear-gradient(135deg,${T.blueB},${T.card})`,border:`1px solid ${T.blue}40`,borderRadius:8,padding:"12px 16px",marginBottom:12}}>
+        <ST c={T.blue} size={13} mb={4}>📋 {initial?.id&&initial.codigo?`Editar: ${initial.codigo}`:"Novo Projeto de Mistura Asfáltica"}</ST>
+        <div style={{fontSize:11,color:T.dim}}>Preencha todos os dados do projeto de dosagem — eles serão usados como limites de controle nos ensaios</div>
+      </div>
+
+      {/* ─── 1. IDENTIFICAÇÃO ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>1. Identificação do Projeto</ST>
+        <Row>
+          <FL label="Código do Projeto" w="200px"><input value={p.codigo} onChange={e=>set("codigo",e.target.value)} placeholder="Ex: ECOA-EGL16-19-30/45-RV.00"/></FL>
+          <FL label="Nome / Descrição" style={{flex:1}}><input value={p.nome} onChange={e=>set("nome",e.target.value)} placeholder="Ex: EGL 16-19 – CAP 30/45 – TM 250"/></FL>
+        </Row>
+        <Row>
+          <FL label="Cliente" style={{flex:1}}><input value={p.cliente} onChange={e=>set("cliente",e.target.value)} placeholder="Ex: EPR Sul de Minas"/></FL>
+          <FL label="Data do Projeto" w="150px"><input type="date" value={p.data} onChange={e=>set("data",e.target.value)}/></FL>
+        </Row>
+        <Row>
+          <FL label="Responsável Técnico" style={{flex:1}}><input value={p.responsavel} onChange={e=>set("responsavel",e.target.value)} placeholder="Técnico de laboratório"/></FL>
+          <FL label="Engenheiro Responsável" style={{flex:1}}><input value={p.engResp} onChange={e=>set("engResp",e.target.value)}/></FL>
+          <FL label="CREA" w="140px"><input value={p.crea} onChange={e=>set("crea",e.target.value)}/></FL>
+        </Row>
+      </Card>
+
+      {/* ─── 2. CAP E MATERIAIS ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>2. Ligante e Composição da Mistura</ST>
+        <Row>
+          <FL label="Tipo de CAP" w="160px">
+            <select value={p.capTipo} onChange={e=>set("capTipo",e.target.value)}>
+              {["CAP 30/45","CAP 50/70","CAP 85/100"].map(c=><option key={c}>{c}</option>)}
+            </select>
+          </FL>
+          <FL label="Fornecedor do CAP" w="200px"><input value={p.capFornecedor} onChange={e=>set("capFornecedor",e.target.value)} placeholder="Ex: Petrobras / Stratura"/></FL>
+          <FL label="Teor Ótimo de CAP (%)" w="150px">
+            <input type="number" step="0.01" value={p.teorcapOtimo} onChange={e=>set("teorcapOtimo",e.target.value)} placeholder="Ex: 5.50"/>
+          </FL>
+        </Row>
+
+        <Divider label="Materiais e % na mistura"/>
+        <div style={{fontSize:10,color:T.dim,marginBottom:6}}>
+          Soma atual (agreg.+CAP): <strong style={{color:somaMatPerc>100.2||somaMatPerc<99.8?(somaMatPerc===0?T.muted:T.red):T.green}}>{fmt(somaMatPerc,2)}%</strong>
+          {somaMatPerc>0&&(somaMatPerc>100.5||somaMatPerc<99.5)&&<span style={{color:T.red}}> ⚠ deve somar 100%</span>}
+        </div>
+        <table>
+          <thead><tr><th>Material</th><th>Fornecedor</th><th>% na Mistura</th><th></th></tr></thead>
+          <tbody>
+            {p.materiais.map((m,i)=>(
+              <tr key={i}>
+                <td><input value={m.nome} onChange={e=>setMat(i,"nome",e.target.value)} placeholder="Ex: Brita 1" style={{width:"100%"}}/></td>
+                <td><input value={m.fornecedor} onChange={e=>setMat(i,"fornecedor",e.target.value)} placeholder="Britasul..." style={{width:"100%"}}/></td>
+                <td><input type="number" step="0.01" value={m.pct} onChange={e=>setMat(i,"pct",e.target.value)} style={{width:90}} placeholder="0.00"/></td>
+                <td><Btn sm bg={T.redB} tc={T.red} onClick={()=>remMat(i)}>✕</Btn></td>
+              </tr>
+            ))}
+            <tr>
+              <td colSpan={2} style={{color:T.muted,fontSize:10}}>CAP (teor ótimo)</td>
+              <td style={{fontFamily:"'Share Tech Mono'",color:T.accent}}>{p.teorcapOtimo||"—"}%</td>
+              <td/>
+            </tr>
+          </tbody>
+        </table>
+        <Btn sm bg={T.surface} tc={T.accent} onClick={addMat} style={{marginTop:6,border:`1px solid ${T.border}`}}>+ Material</Btn>
+      </Card>
+
+      {/* ─── 3. DENSIDADES ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>3. Densidades</ST>
+        <Row>
+          <FL label="Gmm — Dens. Máx. Medida (Rice)" w="220px">
+            <input type="number" step="0.001" value={p.densMax} onChange={e=>set("densMax",e.target.value)} placeholder="Ex: 2.519"/>
+          </FL>
+          <FL label="Gmb — Bulk do CP no Teor Ótimo" w="220px">
+            <input type="number" step="0.001" value={p.densBulk} onChange={e=>set("densBulk",e.target.value)} placeholder="Ex: 2.407"/>
+          </FL>
+          <FL label="Gsb — Dens. Aparente Agreg. Comb." w="230px">
+            <input type="number" step="0.001" value={p.densAparComb} onChange={e=>set("densAparComb",e.target.value)} placeholder="Ex: 2.650"/>
+          </FL>
+          <FL label="Gse — Dens. Efetiva Agreg. Comb." w="230px">
+            <input type="number" step="0.001" value={p.densEfComb} onChange={e=>set("densEfComb",e.target.value)} placeholder="Ex: 2.672"/>
+          </FL>
+          <FL label="Gse Rice — Dens. Efetiva (Rice)" w="220px">
+            <input type="number" step="0.001" value={p.densEfRice} onChange={e=>set("densEfRice",e.target.value)} placeholder="Ex: 2.677"/>
+          </FL>
+        </Row>
+      </Card>
+
+      {/* ─── 4. TEMPERATURAS ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>4. Temperaturas de Processo</ST>
+        <Row>
+          <FL label="Temperatura de Mistura — Mín. (°C)" w="220px"><input type="number" step="1" value={p.tmist_min} onChange={e=>set("tmist_min",e.target.value)} placeholder="150"/></FL>
+          <FL label="Temperatura de Mistura — Máx. (°C)" w="220px"><input type="number" step="1" value={p.tmist_max} onChange={e=>set("tmist_max",e.target.value)} placeholder="160"/></FL>
+          <FL label="Temperatura de Compactação — Mín. (°C)" w="240px"><input type="number" step="1" value={p.tcomp_min} onChange={e=>set("tcomp_min",e.target.value)} placeholder="145"/></FL>
+          <FL label="Temperatura de Compactação — Máx. (°C)" w="240px"><input type="number" step="1" value={p.tcomp_max} onChange={e=>set("tcomp_max",e.target.value)} placeholder="155"/></FL>
+        </Row>
+      </Card>
+
+      {/* ─── 5. PARÂMETROS VOLUMÉTRICOS E MECÂNICOS ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>5. Parâmetros de Controle — Limites do Projeto</ST>
+        <div style={{fontSize:10,color:T.dim,marginBottom:8}}>Estes valores serão usados como critérios de conformidade nos ensaios</div>
+
+        <Divider label="Parâmetros Volumétricos"/>
+        <Row>
+          {[
+            {l:"Vv — Mín (%)",k:"va_min",ph:"3.0"},{l:"Vv — Máx (%)",k:"va_max",ph:"5.0"},
+            {l:"RBV — Mín (%)",k:"rbv_min",ph:"65.0"},{l:"RBV — Máx (%)",k:"rbv_max",ph:"78.0"},
+            {l:"VAM — Mín (%)",k:"vam_min",ph:"13.0"},{l:"VAM — Máx (%)",k:"vam_max",ph:""},
+          ].map(({l,k,ph})=>(
+            <FL key={k} label={l} w="140px">
+              <input type="number" step="0.1" value={p[k]} onChange={e=>set(k,e.target.value)} placeholder={ph}/>
+            </FL>
+          ))}
+        </Row>
+
+        <Divider label="Parâmetros Estruturais / Marshall"/>
+        <Row>
+          {[
+            {l:"Estabilidade — Mín (kgf)",k:"estab_min",ph:"500"},{l:"Estabilidade — Máx (kgf)",k:"estab_max",ph:""},
+            {l:"Fluência — Mín (×0,25mm)",k:"fluencia_min",ph:""},{l:"Fluência — Máx (×0,25mm)",k:"fluencia_max",ph:""},
+            {l:"RT — Mín (MPa)",k:"rt_min",ph:"0.65"},{l:"RT — Máx (MPa)",k:"rt_max",ph:""},
+          ].map(({l,k,ph})=>(
+            <FL key={k} label={l} w="180px">
+              <input type="number" step="0.01" value={p[k]} onChange={e=>set(k,e.target.value)} placeholder={ph}/>
+            </FL>
+          ))}
+        </Row>
+
+        <Divider label="Parâmetros de Agregados"/>
+        <Row>
+          {[
+            {l:"Equiv. Areia — Mín (%)",k:"eq_areia_min",ph:"55"},
+            {l:"Abrasão L.A. — Máx (%)",k:"abrasao_max",ph:"50"},
+            {l:"Índice de Forma — Mín",k:"indice_forma_min",ph:"0.5"},
+          ].map(({l,k,ph})=>(
+            <FL key={k} label={l} w="180px">
+              <input type="number" step="0.01" value={p[k]} onChange={e=>set(k,e.target.value)} placeholder={ph}/>
+            </FL>
+          ))}
+        </Row>
+      </Card>
+
+      {/* ─── 6. FAIXA GRANULOMÉTRICA ─── */}
+      <Card style={{marginBottom:10}}>
+        <ST c={T.accent} mb={10}>6. Faixa Granulométrica de Trabalho</ST>
+        <Row style={{marginBottom:10}}>
+          <FL label="Faixa DNIT 031 (referência)" w="200px">
+            <select value={p.faixaDNIT} onChange={e=>set("faixaDNIT",e.target.value)}>
+              {["A-25","B-19","C-12.5","D-9.5"].map(f=><option key={f}>{f}</option>)}
+            </select>
+          </FL>
+          <FL label="Usar limites próprios do projeto?" w="220px">
+            <select value={p.usarFaixaProjeto?"sim":"nao"} onChange={e=>set("usarFaixaProjeto",e.target.value==="sim")}>
+              <option value="sim">Sim — digitar min/máx por peneira</option>
+              <option value="nao">Não — usar faixa DNIT</option>
+            </select>
+          </FL>
+        </Row>
+
+        <div style={{overflowX:"auto"}}>
+          <table>
+            <thead>
+              <tr>
+                <th>Peneira</th>
+                <th>% Pass. Projeto (curva base)</th>
+                {p.usarFaixaProjeto&&<th>Mín % Pass. (projeto)</th>}
+                {p.usarFaixaProjeto&&<th>Máx % Pass. (projeto)</th>}
+                <th>Faixa DNIT {p.faixaDNIT}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PEN.filter(pen=>pen.id!=="fundo").map(pen=>{
+                const fp=p.faixaProjeto[pen.id]||{};
+                const fxDnit=FAIXAS_DNIT[p.faixaDNIT]?.[pen.dnit];
+                return(
+                  <tr key={pen.id}>
+                    <td style={{color:T.text,fontWeight:600,fontSize:11,whiteSpace:"nowrap"}}>{pen.lb}</td>
+                    <td>
+                      <input type="number" step="0.1" value={fp.base||""} onChange={e=>setFaixa(pen.id,"base",e.target.value)}
+                        style={{width:90}} placeholder="% passante"/>
+                    </td>
+                    {p.usarFaixaProjeto&&(
+                      <td><input type="number" step="0.1" value={fp.min||""} onChange={e=>setFaixa(pen.id,"min",e.target.value)} style={{width:80}} placeholder="mín"/></td>
+                    )}
+                    {p.usarFaixaProjeto&&(
+                      <td><input type="number" step="0.1" value={fp.max||""} onChange={e=>setFaixa(pen.id,"max",e.target.value)} style={{width:80}} placeholder="máx"/></td>
+                    )}
+                    <td style={{color:T.muted,fontSize:10}}>
+                      {Array.isArray(fxDnit)?`${fxDnit[0]}–${fxDnit[1]}%`:fxDnit!=null?`${fxDnit}%`:"-"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* ─── 7. OBS ─── */}
+      <Card style={{marginBottom:12}}>
+        <FL label="Observações do Projeto">
+          <textarea rows={2} value={p.obs} onChange={e=>set("obs",e.target.value)} placeholder="Notas, restrições, ensaios adicionais exigidos..."/>
+        </FL>
+      </Card>
+
+      <Row gap={8}>
+        <Btn onClick={()=>onSalvar(p)} bg={T.accent} style={{flex:1,fontSize:14,padding:"10px"}}>
+          💾 Salvar Projeto de Mistura
+        </Btn>
+        {onCancelar&&<Btn onClick={onCancelar} bg={T.surface} tc={T.dim} style={{border:`1px solid ${T.border}`}}>Cancelar</Btn>}
+      </Row>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// LISTA DE PROJETOS
+// ══════════════════════════════════════════════════════════════════════
+function ListaProjetos({projetos,onSelecionar,onEditar,onNovo,onExcluir,projetoAtivo}){
+  if(projetos.length===0) return(
+    <div style={{textAlign:"center",padding:50,color:T.muted}}>
+      <div style={{fontSize:36,marginBottom:10}}>📋</div>
+      <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>Nenhum projeto cadastrado</div>
+      <div style={{fontSize:12,marginBottom:16}}>Cadastre o projeto de dosagem para usar nos ensaios</div>
+      <Btn onClick={onNovo} bg={T.accent}>+ Novo Projeto de Mistura</Btn>
+    </div>
+  );
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <ST c={T.accent} mb={0} size={12}>Projetos Cadastrados ({projetos.length})</ST>
+        <Btn sm onClick={onNovo} bg={T.accent}>+ Novo Projeto</Btn>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
+        {projetos.map(pr=>{
+          const ativo=projetoAtivo?.id===pr.id;
+          return(
+            <div key={pr.id} style={{background:ativo?`${T.accent}15`:T.card,border:`2px solid ${ativo?T.accent:T.border}`,borderRadius:8,padding:12,transition:"all .2s"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                <div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:800,fontSize:15,color:ativo?T.accent:T.text}}>{pr.codigo||"(sem código)"}</div>
+                  <div style={{fontSize:12,color:T.dim,marginTop:1}}>{pr.nome}</div>
+                </div>
+                {ativo&&<span className="badge conf">ATIVO</span>}
+              </div>
+              <div style={{fontSize:10,color:T.muted,lineHeight:1.7,marginBottom:8}}>
+                {pr.cliente&&<div>🏢 {pr.cliente}</div>}
+                <div>🛢 {pr.capTipo} &nbsp;·&nbsp; Teor ótimo: <strong style={{color:T.accent}}>{pr.teorcapOtimo||"—"}%</strong></div>
+                <div>📐 Faixa: {pr.faixaDNIT} {pr.usarFaixaProjeto?"(faixa própria)":"(DNIT)"}</div>
+                {pr.responsavel&&<div>👤 {pr.responsavel}</div>}
+                {pr.data&&<div>📅 {pr.data}</div>}
+              </div>
+              <Row gap={6}>
+                <Btn sm onClick={()=>onSelecionar(pr)} bg={ativo?T.accentD:T.blueB} tc={ativo?T.bg:T.blue}
+                  style={{flex:1,border:`1px solid ${ativo?T.accent:T.blue}50`}}>
+                  {ativo?"✓ Selecionado":"Usar nos Ensaios"}
+                </Btn>
+                <Btn sm onClick={()=>onEditar(pr)} bg={T.surface} tc={T.dim} style={{border:`1px solid ${T.border}`}}>Editar</Btn>
+                <Btn sm onClick={()=>onExcluir(pr.id)} bg={T.redB} tc={T.red}>✕</Btn>
+              </Row>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// EXTRAÇÃO + GRANULOMETRIA (usa limites do projeto)
+// ══════════════════════════════════════════════════════════════════════
+function ExtrGranuloCalc({proj,onSaved}){
+  const [massaMist,setMM]=useState("");
+  const [kf,setKf]=useState("0");
+  const [metodo,setMet]=useState("Soxhlet (DNIT 158-ME)");
+  const [pesos,setPesos]=useState({});
+  const [trecho,setTrecho]=useState("");
+  const [lote,setLote]=useState("");
+  const [tecnico,setTecnico]=useState("");
+  const setPeso=(id,v)=>setPesos(p=>({...p,[id]:v}));
+
+  const somaRetidos=PEN.reduce((s,p)=>s+nv(pesos[p.id]),0);
+  const massaAgg=somaRetidos;
+  const pb=massaMist&&massaAgg>0?((nv(massaMist)-massaAgg)/nv(massaMist)*100)+nv(kf):null;
+  const projPb=nv(proj?.teorcapOtimo);
+  const desvio=pb!=null&&projPb>0?pb-projPb:null;
+  const confCap=desvio!=null?Math.abs(desvio)<=0.3:null;
+
+  // Granulometria
+  const calcGran=()=>{
+    if(massaAgg<=0) return null;
+    let retAcum=0; const rows=[];
+    for(const pen of PEN){
+      const ret=nv(pesos[pen.id]);
+      retAcum+=ret;
+      const pRI=massaAgg>0?(ret/massaAgg)*100:0;
+      const pRA=massaAgg>0?(retAcum/massaAgg)*100:0;
+      const pP=100-pRA;
+      rows.push({...pen,ret,pRI,pRA,pP});
+    }
+    const soma=rows.reduce((s,r)=>s+r.ret,0);
+    const perdaPct=massaAgg>0?(Math.abs(massaAgg-soma)/massaAgg)*100:0;
+    return {rows,perdaPct,ok:perdaPct<=0.3};
+  };
+  const gran=calcGran();
+
+  // Limites por peneira — usa faixa do projeto se configurada, senão DNIT
+  const getLim=(penId,dnit)=>{
+    if(proj?.usarFaixaProjeto){
+      const fp=proj.faixaProjeto?.[penId];
+      if(fp&&(fp.min!==""||fp.max!=="")) return {min:fp.min,max:fp.max,tipo:"projeto"};
+    }
+    const fxd=proj?.faixaDNIT||"B-19";
+    const lDnit=FAIXAS_DNIT[fxd]?.[dnit];
+    if(lDnit==null) return null;
+    return Array.isArray(lDnit)?{min:lDnit[0],max:lDnit[1],tipo:"DNIT"}:{min:lDnit,max:lDnit,tipo:"DNIT"};
+  };
+
+  const checkPen=(pP,lim)=>{
+    if(!lim) return null;
+    const mn=lim.min!==""&&lim.min!==undefined?parseFloat(lim.min):null;
+    const mx=lim.max!==""&&lim.max!==undefined?parseFloat(lim.max):null;
+    if(mn!==null&&pP<mn) return false;
+    if(mx!==null&&pP>mx) return false;
+    return true;
+  };
+
+  const ncsGran=gran?gran.rows.filter(r=>{
+    const lim=getLim(r.id,r.dnit);
+    return checkPen(r.pP,lim)===false;
+  }):[];
+
+  return(
+    <div>
+      {!proj&&(
+        <div style={{padding:"10px 14px",background:T.orangeB,border:`1px solid ${T.orange}40`,borderRadius:6,marginBottom:12,fontSize:11,color:T.orange}}>
+          ⚠ Nenhum projeto selecionado. Os limites de controle não serão aplicados. Selecione um projeto na aba "Projetos".
+        </div>
+      )}
+      {proj&&(
+        <div style={{padding:"8px 12px",background:`${T.accent}10`,border:`1px solid ${T.accent}30`,borderRadius:6,marginBottom:12,fontSize:11,color:T.dim}}>
+          <strong style={{color:T.accent}}>{proj.codigo}</strong> — {proj.nome} &nbsp;·&nbsp;
+          Teor ótimo: <strong style={{color:T.accent}}>{proj.teorcapOtimo}%</strong> &nbsp;·&nbsp;
+          Faixa: <strong style={{color:T.text}}>{proj.faixaDNIT}</strong>
+          {proj.usarFaixaProjeto&&" (limites do projeto)"}
+        </div>
+      )}
+
+      {/* Extração */}
+      <div style={{border:`1px solid ${T.accent}40`,borderRadius:8,padding:12,marginBottom:12,background:`${T.accent}06`}}>
+        <ST c={T.accent} mb={8}>🛢 Extração do Ligante — DNIT 158-ME / ASTM D6307</ST>
+        <Row>
+          <FL label="Método" w="210px">
+            <select value={metodo} onChange={e=>setMet(e.target.value)}>
+              <option>Soxhlet (DNIT 158-ME)</option>
+              <option>Ignição / Forno (ASTM D6307)</option>
+              <option>Centrífuga (DNER ME-053)</option>
+            </select>
+          </FL>
+          <FL label="Massa da Mistura Asfáltica (g)" w="210px">
+            <input type="number" step="0.1" value={massaMist} onChange={e=>setMM(e.target.value)} placeholder="Ex: 1200.0"/>
+          </FL>
+          <FL label="Fator de Correção kf (%)" w="160px">
+            <input type="number" step="0.001" value={kf} onChange={e=>setKf(e.target.value)} placeholder="0.000"/>
+          </FL>
+        </Row>
+        {/* Resultado extração */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:7,marginTop:8}}>
+          {[
+            {l:"Massa Mistura",v:massaMist?fmt(nv(massaMist),2)+" g":"—",c:T.text},
+            {l:"Massa Agregados (Σ peneiras)",v:massaAgg>0?fmt(massaAgg,2)+" g":"aguardando...",c:massaAgg>0?T.accent:T.muted},
+            {l:"Teor CAP Pb",v:pb!=null?fmt(pb,3)+"%":"—",c:pb!=null?(confCap?T.green:T.red):T.muted},
+            {l:"Desvio (tol. ±0,3%)",v:desvio!=null?(desvio>0?"+":"")+fmt(desvio,3)+"%":"—",c:confCap!=null?(confCap?T.green:T.red):T.muted},
+          ].map(({l,v,c})=>(
+            <div key={l} style={{background:T.surface,padding:"7px 9px",borderRadius:4,borderLeft:`3px solid ${c}`}}>
+              <div style={{fontSize:9,color:T.muted,marginBottom:2}}>{l}</div>
+              <div style={{fontFamily:"'Share Tech Mono'",fontSize:13,fontWeight:700,color:c}}>{v}</div>
+            </div>
+          ))}
+          {pb!=null&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px"}}>
+            <Sb s={confCap?"ok":"nc"}/>
+            {proj&&<span style={{fontSize:9,color:T.muted}}>Projeto: {proj.teorcapOtimo}%</span>}
+          </div>}
+        </div>
+      </div>
+
+      {/* Granulometria */}
+      <div style={{border:`1px solid ${T.green}40`,borderRadius:8,padding:12,background:`${T.green}05`}}>
+        <ST c={T.green} mb={8}>📐 Granulometria dos Agregados — DNIT 412/2025-ME</ST>
+        <div style={{fontSize:10,color:T.dim,marginBottom:8,background:T.surface,padding:"5px 9px",borderRadius:4}}>
+          Pese o retido em cada peneira · A soma alimenta automaticamente o Pb acima
+          {massaAgg>0&&<span style={{color:T.green}}> · M.agg = {fmt(massaAgg,2)} g</span>}
+          {proj&&<span style={{color:T.dim}}> · Comparando contra faixa: <strong style={{color:T.text}}>{proj.usarFaixaProjeto?"projeto próprio":proj.faixaDNIT+" (DNIT)"}</strong></span>}
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table>
+            <thead>
+              <tr>
+                <th>Peneira</th>
+                <th>Retido (g)</th>
+                <th>% Ret. Ind.</th>
+                <th>% Ret. Acum.</th>
+                <th style={{color:T.text}}>% Passante</th>
+                <th>Limite Mín.</th>
+                <th>Limite Máx.</th>
+                <th>Fonte</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PEN.map(pen=>{
+                const row=gran?.rows.find(r=>r.id===pen.id);
+                const lim=getLim(pen.id,pen.dnit);
+                const passOk=row&&lim?checkPen(row.pP,lim):null;
+                return(
+                  <tr key={pen.id} style={{background:passOk===false?`${T.redB}80`:"transparent"}}>
+                    <td style={{color:T.text,fontWeight:600,fontSize:11,whiteSpace:"nowrap"}}>{pen.lb}</td>
+                    <td>
+                      <input type="number" step="0.01" value={pesos[pen.id]||""}
+                        onChange={e=>setPeso(pen.id,e.target.value)}
+                        style={{width:90,padding:"3px 5px",fontSize:11}} placeholder="0.00"/>
+                    </td>
+                    <td style={{color:T.dim,fontFamily:"'Share Tech Mono'"}}>{row?fmt(row.pRI,2):"-"}</td>
+                    <td style={{color:T.dim,fontFamily:"'Share Tech Mono'"}}>{row?fmt(row.pRA,2):"-"}</td>
+                    <td style={{color:passOk===false?T.red:passOk===true?T.green:T.text,fontWeight:700,fontFamily:"'Share Tech Mono'",fontSize:12}}>
+                      {row?fmt(row.pP,2):"-"}
+                    </td>
+                    <td style={{color:T.muted,fontSize:10}}>{lim?.min!==""&&lim?.min!==undefined?lim.min+"%":"-"}</td>
+                    <td style={{color:T.muted,fontSize:10}}>{lim?.max!==""&&lim?.max!==undefined?lim.max+"%":"-"}</td>
+                    <td style={{fontSize:9}}>
+                      {lim&&<span className={`badge ${lim.tipo==="projeto"?"conf":"pend"}`} style={{fontSize:8}}>
+                        {lim.tipo==="projeto"?"PROJ":"DNIT"}
+                      </span>}
+                    </td>
+                    <td>
+                      {passOk===true&&<span className="badge conf">✓ OK</span>}
+                      {passOk===false&&<span className="badge nconf">✗ NC</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+              <tr style={{background:T.surface,borderTop:`2px solid ${T.border}`}}>
+                <td style={{fontWeight:700,color:T.text}}>TOTAL</td>
+                <td style={{fontFamily:"'Share Tech Mono'",fontWeight:700,color:T.accent}}>{somaRetidos>0?fmt(somaRetidos,2)+" g":"—"}</td>
+                <td colSpan={3} style={{color:T.muted,fontSize:10}}>
+                  {massaMist&&somaRetidos>0&&`CAP extraído: ${fmt(nv(massaMist)-somaRetidos,2)} g`}
+                </td>
+                <td colSpan={4}>
+                  {gran&&<span style={{color:gran.ok?T.green:T.red,fontWeight:700,fontSize:11}}>
+                    {gran.ok?`✓ Perda: ${fmt(gran.perdaPct,3)}%`:`⚠ Perda: ${fmt(gran.perdaPct,3)}% — acima de 0,3%`}
+                  </span>}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* NCs resumo */}
+        {ncsGran.length>0&&(
+          <div style={{marginTop:8,padding:"7px 10px",background:T.redB,borderRadius:4,border:`1px solid ${T.red}40`}}>
+            <div style={{fontSize:10,color:T.red,fontWeight:700,marginBottom:4}}>
+              {ncsGran.length} peneira(s) fora da faixa:
+            </div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+              {ncsGran.map(r=>(
+                <span key={r.id} className="badge nconf">{r.lb.trim()} → {fmt(r.pP,2)}%</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Identificação + Salvar */}
+      <div style={{marginTop:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10}}>
+        <div style={{fontSize:10,color:T.muted,marginBottom:6,fontWeight:700,textTransform:"uppercase",letterSpacing:".07em"}}>Identificação do Registro</div>
+        <Row>
+          <FL label="Trecho / KM" style={{flex:1}}><input value={trecho} onChange={e=>setTrecho(e.target.value)} placeholder="Ex: KM 45+200"/></FL>
+          <FL label="Lote / N° Amostra" style={{flex:1}}><input value={lote} onChange={e=>setLote(e.target.value)} placeholder="Ex: EXT-007"/></FL>
+          <FL label="Técnico" style={{flex:1}}><input value={tecnico} onChange={e=>setTecnico(e.target.value)} placeholder="Nome do técnico"/></FL>
+        </Row>
+        <SaveBtn
+          proj={proj}
+          tipo="Extração de CAP + Granulometria (DNIT 158+412)"
+          dados={{
+            massaMist:nv(massaMist),massaAgg,pb,desvio,
+            statusCap:confCap===true?"CONFORME":confCap===false?"NÃO CONFORME":"PENDENTE",
+            ncPeneiras:ncsGran.length+" peneira(s) NC",metodo,kf:nv(kf),
+            granRows:gran?.rows?.map(r=>({id:r.id,lb:r.lb,pP:r.pP})),
+            perdaPct:gran?.perdaPct
+          }}
+          extra={{trecho,lote,tecnico}}
+          status={confCap===true&&ncsGran.length===0?"CONFORME":confCap===false||ncsGran.length>0?"NÃO CONFORME":"PENDENTE"}
+          onSaved={onSaved}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RT – DNIT 136/2018-ME
+// ══════════════════════════════════════════════════════════════════════
+function RTCalc({proj}){
+  const [cps,setCPs]=useState([{id:1,F:"",D:"10",H:""}]);
+  const setV=(i,k,v)=>setCPs(p=>p.map((c,j)=>j===i?{...c,[k]:v}:c));
+  const rt_min=proj?.rt_min||"0.65";
+  const rt_max=proj?.rt_max||"";
+
+  const calcRT=(F,D,H)=>{const f=nv(F),d=nv(D),h=nv(H);if(!f||!d||!h) return null;return (2*f)/(Math.PI*d*h)*0.0981;};
+  const results=cps.map(c=>calcRT(c.F,c.D,c.H));
+  const valid=results.filter(r=>r!==null);
+  const media=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:null;
+
+  return(
+    <div>
+      {proj&&<div style={{marginBottom:10,padding:"6px 10px",background:`${T.accent}10`,border:`1px solid ${T.accent}30`,borderRadius:4,fontSize:10,color:T.dim}}>
+        Limites do projeto <strong style={{color:T.accent}}>{proj.codigo}</strong>: RT ≥ <strong style={{color:T.text}}>{rt_min} MPa</strong>
+        {rt_max&&<span> · RT ≤ <strong style={{color:T.text}}>{rt_max} MPa</strong></span>}
+      </div>}
+      <div style={{fontSize:10,color:T.dim,marginBottom:8}}>
+        RT = (2 × F) / (π × D × H) × 0,0981 &nbsp;·&nbsp; F em kgf · D e H em cm → MPa &nbsp;·&nbsp; DNIT 136/2018-ME
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table>
+          <thead><tr><th>CP</th><th>Carga F (kgf)</th><th>Diâm. D (cm)</th><th>Alt. H (cm)</th><th>RT (MPa)</th><th>Situação</th></tr></thead>
+          <tbody>
+            {cps.map((c,i)=>{
+              const rt=results[i];
+              const s=rt!==null?avalia(rt,rt_min,rt_max):"pend";
+              return(
+                <tr key={c.id}>
+                  <td style={{color:T.accent,fontWeight:700}}>{c.id}</td>
+                  {["F","D","H"].map(k=>(
+                    <td key={k}><input type="number" step="0.1" value={c[k]} onChange={e=>setV(i,k,e.target.value)} style={{width:80}}/></td>
+                  ))}
+                  <td style={{color:rt!=null?(s==="ok"?T.green:T.red):T.muted,fontWeight:700,fontFamily:"'Share Tech Mono'",fontSize:13}}>
+                    {rt!=null?fmt(rt,3)+" MPa":"—"}
+                  </td>
+                  <td>{rt!=null?<Sb s={s}/>:"-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Row style={{marginTop:8,alignItems:"center",gap:10}}>
+        <Btn sm bg={T.surface} tc={T.accent} onClick={()=>setCPs(p=>[...p,{id:p.length+1,F:"",D:"10",H:""}])} style={{border:`1px solid ${T.border}`}}>+ CP</Btn>
+        {media!==null&&(
+          <div style={{padding:"5px 12px",background:avalia(media,rt_min,rt_max)==="ok"?T.greenB:T.redB,borderRadius:4,border:`1px solid ${avalia(media,rt_min,rt_max)==="ok"?T.green:T.red}40`}}>
+            <span style={{fontSize:11,color:T.dim}}>Média RT: </span>
+            <span style={{fontFamily:"'Share Tech Mono'",fontWeight:700,fontSize:14,color:avalia(media,rt_min,rt_max)==="ok"?T.green:T.red}}>{fmt(media,3)} MPa</span>
+            <span style={{marginLeft:8}}><Sb s={avalia(media,rt_min,rt_max)}/></span>
+          </div>
+        )}
+      </Row>
+      <RTSaveRow proj={proj} cps={cps} results={results} valid={valid} media={media} rt_min={rt_min} rt_max={rt_max}/>
+    </div>
+  );
+}
+
+function RTSaveRow({proj,cps,results,valid,media,rt_min,rt_max}){
+  const [trecho,setTrecho]=useState("");
+  const [lote,setLote]=useState("");
+  const [tecnico,setTecnico]=useState("");
+  const [saved,setSaved]=useState(false);
+  return(
+    <div style={{marginTop:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10}}>
+      <div style={{fontSize:10,color:T.muted,marginBottom:6,fontWeight:700,textTransform:"uppercase",letterSpacing:".07em"}}>Identificação do Registro</div>
+      <Row>
+        <FL label="Trecho / KM" style={{flex:1}}><input value={trecho} onChange={e=>setTrecho(e.target.value)} placeholder="Ex: KM 45+200"/></FL>
+        <FL label="Lote / N° CP" style={{flex:1}}><input value={lote} onChange={e=>setLote(e.target.value)} placeholder="Ex: RT-012"/></FL>
+        <FL label="Técnico" style={{flex:1}}><input value={tecnico} onChange={e=>setTecnico(e.target.value)} placeholder="Nome"/></FL>
+      </Row>
+      <SaveBtn
+        proj={proj}
+        tipo="Resistência à Tração – DNIT 136/2018-ME"
+        dados={{nCPs:valid.length,mediaRT:media,minRT:valid.length?Math.min(...results.filter(r=>r!==null)):null,maxRT:valid.length?Math.max(...results.filter(r=>r!==null)):null,rt_min,rt_max,cps:cps.map((c,i)=>({...c,rt:results[i]}))}}
+        extra={{trecho,lote,tecnico}}
+        status={media!=null?(avalia(media,rt_min,rt_max)==="ok"?"CONFORME":"NÃO CONFORME"):"PENDENTE"}
+        onSaved={()=>setSaved(true)}
+      />
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RICE + MARSHALL – DNIT 427-ME + DNIT 447-ME + DNIT 449-PRO
+// ══════════════════════════════════════════════════════════════════════
+const RHOREF=0.99705;
+function RiceCalc({onGmm}){
+  const [dets,setDets]=useState([{id:1,A:"",B:"",C:"",T:"25"},{id:2,A:"",B:"",C:"",T:"25"}]);
+  const setV=(i,k,v)=>setDets(d=>d.map((x,j)=>j===i?{...x,[k]:v}:x));
+  const calcGmm=(A,B,C,Tp)=>{const a=nv(A),b=nv(B),c=nv(C);if(!a||!b||!c||(a+b-c)<=0) return null;return (a/(a+b-c))*(getDW(Tp)/RHOREF);};
+  const results=dets.map(d=>calcGmm(d.A,d.B,d.C,d.T));
+  const valid=results.filter(r=>r!==null);
+  const mediaGmm=valid.length?valid.reduce((s,v)=>s+v,0)/valid.length:null;
+  const diffOk=valid.length>=2?Math.max(...valid)-Math.min(...valid)<=0.011:null;
+  useEffect(()=>{if(mediaGmm&&onGmm) onGmm(mediaGmm.toFixed(4));},[mediaGmm]);
+  return(
+    <div style={{border:`1px solid ${T.blue}40`,borderRadius:6,padding:10,marginBottom:12,background:`${T.blue}07`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:13,color:T.blue}}>
+          🔬 Rice — DNIT 427-ME &nbsp;<span style={{fontSize:10,color:T.muted,fontWeight:400}}>Gmm = A/(A+B−C)×(ρ₂₅/ρT)</span>
+        </span>
+        {mediaGmm&&(
+          <div style={{textAlign:"center",background:T.blueB,border:`1px solid ${T.blue}50`,borderRadius:4,padding:"4px 12px"}}>
+            <div style={{fontSize:8,color:T.muted}}>Gmm calculado</div>
+            <div style={{fontFamily:"'Share Tech Mono'",fontSize:18,fontWeight:700,color:T.blue}}>{fmt(mediaGmm,4)}</div>
+            {diffOk!==null&&<div style={{fontSize:8,color:diffOk?T.green:T.red}}>{diffOk?"✓ dif≤0,011":"⚠ dif>0,011"}</div>}
+          </div>
+        )}
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table>
+          <thead><tr><th>Det.</th><th>A – Amostra seca (g)</th><th>B – Picnôm.+água (g)</th><th>C – Picnôm.+am.+água (g)</th><th>T°C</th><th>ρágua</th><th>Gmm</th></tr></thead>
+          <tbody>
+            {dets.map((d,i)=>(
+              <tr key={d.id}>
+                <td style={{color:T.blue,fontWeight:700}}>{d.id}</td>
+                {["A","B","C"].map(k=>(
+                  <td key={k}><input type="number" step="0.1" value={d[k]} onChange={e=>setV(i,k,e.target.value)} style={{width:100}}/></td>
+                ))}
+                <td><input type="number" step="1" min="15" max="35" value={d.T} onChange={e=>setV(i,"T",e.target.value)} style={{width:55}}/></td>
+                <td style={{color:T.dim,fontSize:10}}>{fmt(getDW(d.T),5)}</td>
+                <td style={{color:results[i]?T.blue:T.muted,fontWeight:700}}>{results[i]?fmt(results[i],4):"—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {dets.length<3&&<Btn sm bg={T.blueB} tc={T.blue} onClick={()=>setDets(d=>[...d,{id:d.length+1,A:"",B:"",C:"",T:"25"}])} style={{marginTop:6}}>+ 3ª det.</Btn>}
+    </div>
+  );
+}
+
+function MarshallCalc({proj}){
+  const [GmmRice,setGmmRice]=useState("");
+  const [GmmMan,setGmmMan]=useState("");
+  const [modoGmm,setModo]=useState("rice");
+  const [Gsb,setGsb]=useState(proj?.densAparComb||"2.700");
+  const [Pb,setPb]=useState(proj?.teorcapOtimo||"");
+  const [cps,setCPs]=useState([1,2,3].map(i=>({id:i,A:"",B:"",C:"",H:"",El:"",flu:""})));
+  const setV=(i,k,v)=>setCPs(p=>p.map((c,j)=>j===i?{...c,[k]:v}:c));
+
+  useEffect(()=>{if(proj?.densAparComb) setGsb(proj.densAparComb);if(proj?.teorcapOtimo) setPb(proj.teorcapOtimo);},[proj]);
+
+  const Gmm=modoGmm==="rice"?GmmRice:GmmMan;
+
+  const calcCP=c=>{
+    const A=nv(c.A),B=nv(c.B),C=nv(c.C),El=nv(c.El),H=nv(c.H);
+    if(!A||!B||!C||B===C) return null;
+    const Gmb=A/(B-C);
+    const Gm=nv(Gmm),Gs=nv(Gsb),Pb_v=nv(Pb);
+    const Vv=Gm>0?100*(1-Gmb/Gm):null;
+    const Ps=100-Pb_v;
+    const VAM=Gs>0?100-(Gmb*Ps/Gs):null;
+    const RBV=VAM&&Vv!==null&&VAM>0?((VAM-Vv)/VAM)*100:null;
+    const fator=getMC(H);
+    const Ec=El>0?El*fator:null;
+    return {Gmb,Vv,VAM,RBV,Ec,fator,flu:nv(c.flu)};
+  };
+  const results=cps.map(c=>calcCP(c));
+  const valid=results.filter(r=>r!==null);
+  const med=k=>valid.length?valid.reduce((s,r)=>s+(r[k]||0),0)/valid.length:null;
+  const mGmb=med("Gmb"),mVv=med("Vv"),mVAM=med("VAM"),mRBV=med("RBV"),mE=med("Ec"),mF=med("flu");
+
+  const va_min=proj?.va_min||"3.0",va_max=proj?.va_max||"5.0";
+  const rbv_min=proj?.rbv_min||"65.0",rbv_max=proj?.rbv_max||"78.0";
+  const vam_min=proj?.vam_min||"13.0",vam_max=proj?.vam_max||"";
+  const est_min=proj?.estab_min||"500",est_max=proj?.estab_max||"";
+  const flu_min=proj?.fluencia_min||"",flu_max=proj?.fluencia_max||"";
+
+  return(
+    <div>
+      {proj&&<div style={{marginBottom:10,padding:"6px 10px",background:`${T.accent}10`,border:`1px solid ${T.accent}30`,borderRadius:4,fontSize:10,color:T.dim}}>
+        Limites do projeto <strong style={{color:T.accent}}>{proj.codigo}</strong>: Vv {va_min}–{va_max}% · RBV {rbv_min}–{rbv_max}% · VAM ≥{vam_min}% · Estab. ≥{est_min} kgf
+      </div>}
+
+      <RiceCalc onGmm={setGmmRice}/>
+
+      <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10,marginBottom:10}}>
+        <Row style={{marginBottom:8}}>
+          {["rice","manual"].map(m=>(
+            <button key={m} onClick={()=>setModo(m)} style={{
+              padding:"4px 10px",fontSize:11,fontWeight:700,borderRadius:3,
+              background:modoGmm===m?T.blue:T.surface,color:modoGmm===m?T.bg:T.muted,
+              border:`1px solid ${modoGmm===m?T.blue:T.border}`
+            }}>{m==="rice"?"Gmm do Rice":"Gmm Manual"}</button>
+          ))}
+        </Row>
+        <Row>
+          {modoGmm==="rice"
+            ?<div style={{padding:"5px 10px",background:T.blueB,border:`1px solid ${T.blue}40`,borderRadius:4,fontSize:12}}>
+               Gmm: <strong style={{color:T.blue}}>{GmmRice||"preencher Rice acima ↑"}</strong>
+             </div>
+            :<FL label="Gmm manual" w="160px"><input type="number" step="0.0001" value={GmmMan} onChange={e=>setGmmMan(e.target.value)} placeholder="2.5201"/></FL>
+          }
+          <FL label="Gsb – Dens. Real Agreg." w="180px">
+            <input type="number" step="0.001" value={Gsb} onChange={e=>setGsb(e.target.value)}/>
+          </FL>
+          <FL label="Pb – Teor CAP (%)" w="150px">
+            <input type="number" step="0.01" value={Pb} onChange={e=>setPb(e.target.value)} placeholder="5.50"/>
+          </FL>
+        </Row>
+      </div>
+
+      <div style={{overflowX:"auto",marginBottom:8}}>
+        <table>
+          <thead>
+            <tr>
+              <th>CP</th><th>A – Seco (g)</th><th>B – Sat.Sup. (g)</th><th>C – Subm. (g)</th>
+              <th>Gmb</th><th>Vv (%)</th><th>VAM (%)</th><th>RBV (%)</th>
+              <th>H (cm)</th><th>Fat.</th><th>E.Lida (kgf)</th><th>E.Corr. (kgf)</th><th>Fluência</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cps.map((c,i)=>{
+              const r=results[i];
+              return(
+                <tr key={c.id}>
+                  <td style={{color:T.accent,fontWeight:700}}>{c.id}</td>
+                  {["A","B","C"].map(k=>(
+                    <td key={k}><input type="number" step="0.1" value={c[k]} onChange={e=>setV(i,k,e.target.value)} style={{width:85}}/></td>
+                  ))}
+                  <td style={{fontFamily:"'Share Tech Mono'",color:T.text}}>{r?fmt(r.Gmb,4):"—"}</td>
+                  <td style={{color:r?.Vv!=null?(avalia(r.Vv,va_min,va_max)==="ok"?T.green:T.red):T.muted,fontWeight:700,fontFamily:"'Share Tech Mono'"}}>
+                    {r?.Vv!=null?fmt(r.Vv,2)+"% "+"":""}<br/>{r?.Vv!=null&&<Sb s={avalia(r.Vv,va_min,va_max)}/>}
+                  </td>
+                  <td style={{color:T.dim,fontFamily:"'Share Tech Mono'"}}>{r?.VAM!=null?fmt(r.VAM,2)+"%":"—"}</td>
+                  <td style={{color:r?.RBV!=null?(avalia(r.RBV,rbv_min,rbv_max)==="ok"?T.green:T.red):T.muted,fontWeight:700,fontFamily:"'Share Tech Mono'"}}>
+                    {r?.RBV!=null?fmt(r.RBV,2)+"%":""}<br/>{r?.RBV!=null&&<Sb s={avalia(r.RBV,rbv_min,rbv_max)}/>}
+                  </td>
+                  <td><input type="number" step="0.01" value={c.H} onChange={e=>setV(i,"H",e.target.value)} style={{width:65}} placeholder="6.35"/></td>
+                  <td style={{color:T.dim,fontSize:10,fontFamily:"'Share Tech Mono'"}}>{r?fmt(r.fator,2):"—"}</td>
+                  <td><input type="number" step="1" value={c.El} onChange={e=>setV(i,"El",e.target.value)} style={{width:75}}/></td>
+                  <td style={{color:r?.Ec!=null?(avalia(r.Ec,est_min,est_max)==="ok"?T.green:T.red):T.muted,fontWeight:700,fontSize:13,fontFamily:"'Share Tech Mono'"}}>
+                    {r?.Ec!=null?fmt(r.Ec,0):"—"}
+                  </td>
+                  <td><input type="number" step="0.25" value={c.flu} onChange={e=>setV(i,"flu",e.target.value)} style={{width:70}}/></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Btn sm bg={T.surface} tc={T.accent} onClick={()=>setCPs(p=>[...p,{id:p.length+1,A:"",B:"",C:"",H:"",El:"",flu:""}])} style={{border:`1px solid ${T.border}`}}>+ CP</Btn>
+
+      {valid.length>0&&(
+        <div style={{marginTop:10,background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10}}>
+          <ST c={T.accent} mb={8}>Médias — {valid.length} CP(s)</ST>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:7,marginBottom:10}}>
+            {[
+              {l:"Gmm (Rice)",v:Gmm?fmt(nv(Gmm),4):"—",c:T.blue},
+              {l:"Gmb médio",v:fmt(mGmb,4),c:T.text},
+              {l:"Vv médio",v:mVv!=null?fmt(mVv,2)+"%":"—",c:mVv!=null?(avalia(mVv,va_min,va_max)==="ok"?T.green:T.red):T.muted},
+              {l:"VAM médio",v:mVAM!=null?fmt(mVAM,2)+"%":"—",c:T.dim},
+              {l:"RBV médio",v:mRBV!=null?fmt(mRBV,2)+"%":"—",c:mRBV!=null?(avalia(mRBV,rbv_min,rbv_max)==="ok"?T.green:T.red):T.muted},
+              {l:"Estab. corr.",v:mE!=null?fmt(mE,0)+" kgf":"—",c:mE!=null?(avalia(mE,est_min,est_max)==="ok"?T.green:T.red):T.muted},
+              {l:"Fluência",v:mF!=null?fmt(mF,2)+" ×0,25mm":"—",c:T.text},
+            ].map(({l,v,c})=>(
+              <div key={l} style={{background:T.card,padding:"7px 9px",borderRadius:4,borderLeft:`3px solid ${c==="—"?T.border:c}`}}>
+                <div style={{fontSize:8,color:T.muted,marginBottom:2}}>{l}</div>
+                <div style={{fontFamily:"'Share Tech Mono'",fontSize:14,fontWeight:700,color:c}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {mVv!=null&&<Sb s={avalia(mVv,va_min,va_max)}/>}
+            {mRBV!=null&&<span className={`badge ${avalia(mRBV,rbv_min,rbv_max)==="ok"?"conf":"nconf"}`}>RBV {avalia(mRBV,rbv_min,rbv_max)==="ok"?"OK":"NC"}</span>}
+            {mE!=null&&<span className={`badge ${avalia(mE,est_min,est_max)==="ok"?"conf":"nconf"}`}>Estab. {avalia(mE,est_min,est_max)==="ok"?"OK":"NC"}</span>}
+            {mVAM!=null&&<span className={`badge ${avalia(mVAM,vam_min,vam_max)==="ok"?"conf":"pend"}`}>VAM {avalia(mVAM,vam_min,vam_max)==="ok"?"OK":"NC"}</span>}
+          </div>
+        </div>
+      )}
+      <MarshallSaveRow proj={proj} Gmm={Gmm} mGmb={mGmb} mVv={mVv} mVAM={mVAM} mRBV={mRBV} mE={mE} mF={mF}
+        va_min={va_min} va_max={va_max} rbv_min={rbv_min} rbv_max={rbv_max} vam_min={vam_min} est_min={est_min}/>
+    </div>
+  );
+}
+
+function MarshallSaveRow({proj,Gmm,mGmb,mVv,mVAM,mRBV,mE,mF,va_min,va_max,rbv_min,rbv_max,vam_min,est_min}){
+  const [trecho,setTrecho]=useState("");
+  const [lote,setLote]=useState("");
+  const [tecnico,setTecnico]=useState("");
+  const statusGeral=()=>{
+    if(mVv==null&&mE==null) return "PENDENTE";
+    const oks=[avalia(mVv,va_min,va_max),avalia(mRBV,rbv_min,rbv_max),avalia(mE,est_min,"")];
+    if(oks.some(s=>s==="nc")) return "NÃO CONFORME";
+    if(oks.every(s=>s==="ok")) return "CONFORME";
+    return "PENDENTE";
+  };
+  return(
+    <div style={{marginTop:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10}}>
+      <div style={{fontSize:10,color:T.muted,marginBottom:6,fontWeight:700,textTransform:"uppercase",letterSpacing:".07em"}}>Identificação do Registro</div>
+      <Row>
+        <FL label="Trecho / KM" style={{flex:1}}><input value={trecho} onChange={e=>setTrecho(e.target.value)} placeholder="Ex: KM 45+200"/></FL>
+        <FL label="Lote / N° Betonada" style={{flex:1}}><input value={lote} onChange={e=>setLote(e.target.value)} placeholder="Ex: MAR-005"/></FL>
+        <FL label="Técnico" style={{flex:1}}><input value={tecnico} onChange={e=>setTecnico(e.target.value)} placeholder="Nome"/></FL>
+      </Row>
+      <SaveBtn
+        proj={proj}
+        tipo="Rice + Marshall + Volumétricos (DNIT 427+447+449)"
+        dados={{gmm:nv(Gmm),gmb:mGmb,vv:mVv,vam:mVAM,rbv:mRBV,estab:mE,fluencia:mF}}
+        extra={{trecho,lote,tecnico}}
+        status={statusGeral()}
+        onSaved={()=>{}}
+      />
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// EQUIVALENTE DE AREIA
+// ══════════════════════════════════════════════════════════════════════
+function EquivArCalc({proj}){
+  const [hs,setHs]=useState([{id:1,h1:"",h2:""}]);
+  const setV=(i,k,v)=>setHs(h=>h.map((x,j)=>j===i?{...x,[k]:v}:x));
+  const eq_min=proj?.eq_areia_min||"55";
+  const calcSE=(h1,h2)=>{const a=nv(h1),b=nv(h2);return a&&b?(b/a)*100:null;};
+  const results=hs.map(h=>calcSE(h.h1,h.h2));
+  const valid=results.filter(r=>r!==null);
+  const media=valid.length?valid.reduce((s,v)=>s+v,0)/valid.length:null;
+  return(
+    <div>
+      <div style={{fontSize:10,color:T.dim,marginBottom:8}}>
+        SE = (H2/H1) × 100 · H1=nível total · H2=nível areia · Critério: SE ≥ {eq_min}% · DNIT 450-ME
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table>
+          <thead><tr><th>Amostra</th><th>H1 – Total (mm)</th><th>H2 – Areia (mm)</th><th>SE (%)</th><th>Situação</th></tr></thead>
+          <tbody>
+            {hs.map((h,i)=>{
+              const se=results[i];
+              return(
+                <tr key={h.id}>
+                  <td style={{color:T.accent}}>{h.id}</td>
+                  <td><input type="number" step="0.5" value={h.h1} onChange={e=>setV(i,"h1",e.target.value)} style={{width:100}}/></td>
+                  <td><input type="number" step="0.5" value={h.h2} onChange={e=>setV(i,"h2",e.target.value)} style={{width:100}}/></td>
+                  <td style={{color:se!=null?(avalia(se,eq_min,"")=="ok"?T.green:T.red):T.muted,fontWeight:700,fontFamily:"'Share Tech Mono'"}}>{se!=null?fmt(se,1)+"%":"—"}</td>
+                  <td>{se!=null?<Sb s={avalia(se,eq_min,"")}/>:"-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Row style={{marginTop:8,alignItems:"center",gap:10}}>
+        <Btn sm bg={T.surface} tc={T.accent} onClick={()=>setHs(p=>[...p,{id:p.length+1,h1:"",h2:""}])} style={{border:`1px solid ${T.border}`}}>+ Amostra</Btn>
+        {media!==null&&(
+          <div style={{padding:"5px 12px",background:avalia(media,eq_min,"")==="ok"?T.greenB:T.redB,borderRadius:4}}>
+            <span style={{fontFamily:"'Share Tech Mono'",fontWeight:700,fontSize:14,color:avalia(media,eq_min,"")==="ok"?T.green:T.red}}>{fmt(media,1)}%</span>
+            <span style={{marginLeft:8}}><Sb s={avalia(media,eq_min,"")}/></span>
+          </div>
+        )}
+      </Row>
+      <EquivSaveRow proj={proj} nAmostras={valid.length} mediaSE={media} eq_min={eq_min}/>
+    </div>
+  );
+}
+
+function EquivSaveRow({proj,nAmostras,mediaSE,eq_min}){
+  const [trecho,setTrecho]=useState("");
+  const [lote,setLote]=useState("");
+  const [tecnico,setTecnico]=useState("");
+  return(
+    <div style={{marginTop:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:10}}>
+      <div style={{fontSize:10,color:T.muted,marginBottom:6,fontWeight:700,textTransform:"uppercase",letterSpacing:".07em"}}>Identificação do Registro</div>
+      <Row>
+        <FL label="Trecho / KM" style={{flex:1}}><input value={trecho} onChange={e=>setTrecho(e.target.value)} placeholder="Ex: KM 45+200"/></FL>
+        <FL label="Lote / N° Amostra" style={{flex:1}}><input value={lote} onChange={e=>setLote(e.target.value)} placeholder="Ex: SE-003"/></FL>
+        <FL label="Técnico" style={{flex:1}}><input value={tecnico} onChange={e=>setTecnico(e.target.value)} placeholder="Nome"/></FL>
+      </Row>
+      <SaveBtn
+        proj={proj}
+        tipo="Equivalente de Areia – DNIT 450-ME"
+        dados={{nAmostras,mediaSE,eq_min}}
+        extra={{trecho,lote,tecnico}}
+        status={mediaSE!=null?(avalia(mediaSE,eq_min,"")==="ok"?"CONFORME":"NÃO CONFORME"):"PENDENTE"}
+        onSaved={()=>{}}
+      />
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CONTROLE ESTATÍSTICO – modelo SPMAR/Contern · Anexo A DNIT 031/2024
+// Tabela resumo: 1 linha/ensaio + rodapé N·Média·Sd·k·X̄±kS·APROVADO
+// ══════════════════════════════════════════════════════════════════════
+const KT={5:1.55,6:1.41,7:1.36,8:1.31,9:1.25,10:1.21,11:1.19,12:1.16,13:1.13,14:1.11,15:1.10,16:1.08,17:1.06,19:1.04,21:1.01};
+const getK=n=>{if(n<=5) return 1.55;if(n>=21) return 1.01;const ks=Object.keys(KT).map(Number).sort((a,b)=>a-b);for(const k of ks){if(n<=k) return KT[k];}return 1.01;};
+function estatArr(arr){const v=arr.filter(x=>x!==null&&!isNaN(x));if(!v.length)return{n:0,med:null,sd:null,k:null,xmin:null,xmax:null};const n=v.length;const med=v.reduce((a,b)=>a+b,0)/n;const sd=n>1?Math.sqrt(v.map(x=>(x-med)**2).reduce((a,b)=>a+b,0)/(n-1)):0;const k=getK(n);return{n,med,sd,k,xmin:med-k*sd,xmax:med+k*sd};}
+const ECOLS=[
+  {id:"pb",   lb:"Betume %",    d:2, get:e=>e.dados?.pb,    lim:p=>({mn:null,mx:null})},
+  {id:"gmm",  lb:"Gmm",         d:4, get:e=>e.dados?.gmm,   lim:p=>({mn:null,mx:null})},
+  {id:"gmb",  lb:"Gmb",         d:4, get:e=>e.dados?.gmb,   lim:p=>({mn:null,mx:null})},
+  {id:"vv",   lb:"Vv (%)",      d:2, get:e=>e.dados?.vv,    lim:p=>({mn:parseFloat(p?.va_min||3),mx:parseFloat(p?.va_max||5)})},
+  {id:"vam",  lb:"VAM (%)",     d:2, get:e=>e.dados?.vam,   lim:p=>({mn:parseFloat(p?.vam_min||13),mx:null})},
+  {id:"rbv",  lb:"RBV (%)",     d:2, get:e=>e.dados?.rbv,   lim:p=>({mn:parseFloat(p?.rbv_min||65),mx:parseFloat(p?.rbv_max||78)})},
+  {id:"estab",lb:"Estab.(kgf)", d:0, get:e=>e.dados?.estab, lim:p=>({mn:parseFloat(p?.estab_min||500),mx:null})},
+  {id:"flu",  lb:"Flu.(mm)",    d:2, get:e=>e.dados?.fluencia, lim:p=>({mn:null,mx:null})},
+  {id:"rt",   lb:"RT (MPa)",    d:3, get:e=>e.dados?.mediaRT,lim:p=>({mn:parseFloat(p?.rt_min||0.65),mx:null})},
+];
+const GCOLS=[
+  {id:"p38",  lb:'3/4"'},{id:"p25",lb:'1/2"'},{id:"p19",lb:'3/8"'},
+  {id:"p127", lb:'1/4"'},{id:"p48",lb:'nº4'}, {id:"p236",lb:'nº8'},
+  {id:"p118", lb:'nº16'},{id:"p060",lb:'nº30'},{id:"p0075",lb:'nº200'},
+];
+const getGP=(e,id)=>{const r=(e.dados?.granRows||[]).find(x=>x.id===id);return r?.pP!=null?r.pP:null;};
+
+function EstatCalc({proj,ensaios,projetos}){
+  const [projFiltro,setProjFiltro]=useState(proj?.id||"todos");
+  const [dtIni,setDtIni]=useState("");
+  const [dtFim,setDtFim]=useState("");
+  const projSel=projetos.find(p=>p.id===projFiltro)||proj;
+  const linhas=ensaios.filter(e=>{
+    const pOk=projFiltro==="todos"||e.projId===projFiltro;
+    const dOk=e.dados&&(e.dados.gmb!=null||e.dados.pb!=null||e.dados.mediaRT!=null);
+    const d=new Date(e.data||e.savedAt);
+    return pOk&&dOk&&(!dtIni||d>=new Date(dtIni+"T00:00:00"))&&(!dtFim||d<=new Date(dtFim+"T23:59:59"));
+  }).sort((a,b)=>new Date(a.data||a.savedAt)-new Date(b.data||b.savedAt));
+  const fN=(v,d=2)=>v!=null&&!isNaN(v)?Number(v).toFixed(d):"—";
+  const dS=iso=>{if(!iso)return"—";return new Date(iso).toLocaleDateString("pt-BR");};
+  const eCols=ECOLS.map(c=>{const vals=linhas.map(e=>{const v=c.get(e);return v!=null?parseFloat(v):null;});const s=estatArr(vals);const lim=c.lim(projSel);const ok=s.xmin!=null?((!lim.mn||s.xmin>=lim.mn)&&(!lim.mx||s.xmax<=lim.mx)):null;return{...c,vals,s,lim,ok};}).filter(c=>c.s.n>0);
+  const gCols=GCOLS.map(gc=>{const vals=linhas.map(e=>getGP(e,gc.id));const s=estatArr(vals.filter(v=>v!==null));const fp=projSel?.faixaProjeto?.[gc.id];const mn=fp?.min?parseFloat(fp.min):null;const mx=fp?.max?parseFloat(fp.max):null;const ok=s.xmin!=null?((mn===null||s.xmin>=mn)&&(mx===null||s.xmax<=mx)):null;return{...gc,vals,s,mn,mx,ok};}).filter(c=>c.s.n>0);
+
+  const gerarPDF=()=>{
+    const w=window.open("","_blank","width=1200,height=800");
+    if(!w){alert("Permita popups.");return;}
+    const PCSS=`@page{size:A3 landscape;margin:6mm;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:6.5pt;color:#000;}.hdr{background:#1a3a6a;color:#fff;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;}.hdr h1{font-size:10pt;font-weight:700;}.hdr .sub{font-size:6pt;opacity:.8;}.info{display:grid;border-bottom:1.5px solid #1a3a6a;}.ic{padding:2px 5px;border-right:1px solid #ccc;font-size:6pt;}.ic:last-child{border-right:none;}.ic b{display:block;font-size:5.5pt;color:#555;text-transform:uppercase;}table.main{border-collapse:collapse;width:100%;margin-top:2px;}table.main th{background:#1a3a6a;color:#fff;font-size:5.5pt;padding:2px 3px;text-align:center;border:0.5px solid #8a9abb;white-space:nowrap;}table.main th.grp{background:#2a5a9a;font-size:5pt;}table.main td{padding:2px 3px;border:0.5px solid #ccc;font-size:6pt;text-align:center;white-space:nowrap;}table.main td.dl{text-align:left;font-weight:600;}.sn{background:#e0e8ff!important;}.sm{background:#d0f0e0!important;font-weight:700;}.ss{background:#fff8e0!important;}.sk{background:#fff8e0!important;}.sH{background:#ffe0e0!important;font-weight:700;}.sL{background:#ffe0e0!important;font-weight:700;}.rsup{background:#e0ffe0!important;font-size:5.5pt;}.rinf{background:#e0ffe0!important;font-size:5.5pt;}.obs td{font-weight:700;font-size:5.5pt;}.ap{background:#1a7a43;color:#fff;padding:0 3px;border-radius:1px;font-size:5.5pt;}.rp{background:#7a1a1a;color:#fff;padding:0 3px;border-radius:1px;font-size:5.5pt;}.sig{display:flex;gap:20px;margin-top:6px;border-top:1px solid #1a3a6a;padding-top:3px;}.sc{flex:1;font-size:6pt;}.sl{border-bottom:1px solid #555;height:12px;margin-bottom:2px;}.foot{font-size:5pt;color:#aaa;text-align:right;margin-top:3px;}tr:nth-child(even) td{background:#f4f7ff;}@media print{button{display:none!important;}}`;
+    const dRows=linhas.map((e,i)=>{
+      const bg=i%2===0?"#fff":"#f4f7ff";
+      const gCells=gCols.map(gc=>{const v=getGP(e,gc.id);return`<td style="background:${bg}">${v!=null?fN(v,1):"—"}</td>`;}).join("");
+      const eCells=eCols.map(c=>{const v=c.get(e);const vn=v!=null?parseFloat(v):null;const ok=vn!=null?(c.lim.mn&&vn<c.lim.mn?false:c.lim.mx&&vn>c.lim.mx?false:true):null;const col=ok===false?"#7a1a1a":ok===true?"#1a5a2a":"#000";return`<td style="background:${bg};color:${col};font-weight:${ok===false?700:400}">${vn!=null?fN(vn,c.d):"—"}</td>`;}).join("");
+      return`<tr><td class="dl" style="background:${bg}">${dS(e.data||e.savedAt)}</td><td style="background:${bg}">${e.tecnico||"—"}</td>${gCells}${eCells}</tr>`;
+    }).join("");
+    const statDefs=[{cls:"sn",lb:"N",fn:s=>s.n},{cls:"sm",lb:"Média (X̄)",fn:s=>fN(s.med,3)},{cls:"ss",lb:"Desv. Pad. S",fn:s=>fN(s.sd,3)},{cls:"sk",lb:"k (Tab.A1)",fn:s=>fN(s.k,2)},{cls:"sH",lb:"X̄ + k·S (máx)",fn:s=>fN(s.xmax,3)},{cls:"sL",lb:"X̄ − k·S (mín)",fn:s=>fN(s.xmin,3)}];
+    const sRows=statDefs.map(r=>`<tr><td colspan="2" style="font-weight:700;text-align:left;padding-left:4px;font-size:5.5pt;background:#e8eeff;">${r.lb}</td>${gCols.map(gc=>`<td class="${r.cls}">${r.fn(gc.s)}</td>`).join("")}${eCols.map(c=>`<td class="${r.cls}">${r.fn(c.s)}</td>`).join("")}</tr>`).join("");
+    const rSup=`<tr><td colspan="2" style="font-weight:700;text-align:left;padding-left:4px;font-size:5.5pt;background:#e0ffe0;">Limite Superior</td>${gCols.map(gc=>`<td class="rsup">${gc.mx!=null?fN(gc.mx,0):"—"}</td>`).join("")}${eCols.map(c=>`<td class="rsup">${c.lim.mx!=null?fN(c.lim.mx,c.d):"—"}</td>`).join("")}</tr>`;
+    const rInf=`<tr><td colspan="2" style="font-weight:700;text-align:left;padding-left:4px;font-size:5.5pt;background:#e0ffe0;">Limite Inferior</td>${gCols.map(gc=>`<td class="rinf">${gc.mn!=null?fN(gc.mn,0):"—"}</td>`).join("")}${eCols.map(c=>`<td class="rinf">${c.lim.mn!=null?fN(c.lim.mn,c.d):"—"}</td>`).join("")}</tr>`;
+    const obsR=`<tr class="obs"><td colspan="2" style="text-align:left;padding-left:4px;background:#1a3a6a;color:#fff;font-size:5.5pt;">OBS:</td>${gCols.map(gc=>`<td style="background:${gc.ok===false?"#7a1a1a":"#1a7a43"};color:#fff;font-size:5pt;">${gc.ok===false?"REPROVADO":"APROVADO"}</td>`).join("")}${eCols.map(c=>`<td style="background:${c.ok===false?"#7a1a1a":c.ok===true?"#1a7a43":"#555"};color:#fff;font-size:5pt;">${c.ok===false?"REPROVADO":c.ok===true?"APROVADO":"—"}</td>`).join("")}</tr>`;
+    const thG=gCols.map(gc=>`<th class="grp">${gc.lb}</th>`).join("");
+    const thE=eCols.map(c=>`<th>${c.lb}</th>`).join("");
+    const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Ctrl. Estat. – ${projSel?.codigo||"Todos"}</title><style>${PCSS}</style></head><body>
+<div class="hdr"><div><h1>CONTROLE TECNOLÓGICO DE CONCRETO ASFÁLTICO</h1><div class="sub">DNIT 031/2024-ES · Controle Estatístico Anexo A · SGLAA · ${new Date().toLocaleString("pt-BR")}</div></div><div style="text-align:right;font-size:6.5pt;">Emissão: ${new Date().toLocaleDateString("pt-BR")}</div></div>
+<div class="info" style="grid-template-columns:3fr 2fr 1fr 2fr;">
+  <div class="ic"><b>Obra / Rodovia</b>${projSel?.cliente||"—"}</div>
+  <div class="ic"><b>Mistura / Material</b>${projSel?.nome||"—"}</div>
+  <div class="ic"><b>CAP / Dosagem</b>${projSel?.capTipo||"—"} · ${projSel?.teorcapOtimo||"—"}%</div>
+  <div class="ic"><b>Projeto</b>${projSel?.codigo||"—"} · Faixa ${projSel?.faixaDNIT||"—"} · Período: ${dtIni||"início"} a ${dtFim||"atual"}</div>
+</div>
+<table class="main">
+  <thead>
+    <tr>
+      <th rowspan="2" style="text-align:left;">Data Coleta</th>
+      <th rowspan="2">Equipe / Técnico</th>
+      ${gCols.length?`<th colspan="${gCols.length}" class="grp">GRANULOMETRIA (% Passante) – DNIT 412/2019</th>`:""}
+      ${eCols.length?`<th colspan="${eCols.length}" class="grp">MISTURAS BETUMINOSAS – ESPECIFICAÇÃO DE TRABALHO</th>`:""}
+    </tr>
+    <tr>${thG}${thE}</tr>
+  </thead>
+  <tbody>${dRows||'<tr><td colspan="20" style="text-align:center;color:#888;padding:8px;">Nenhum dado para os filtros selecionados.</td></tr>'}</tbody>
+  <tfoot>${sRows}${rSup}${rInf}${obsR}</tfoot>
+</table>
+<div class="sig">
+  <div class="sc"><div class="sl"></div>Operador / Técnico de Laboratório</div>
+  <div class="sc"><div class="sl"></div>Responsável Técnico</div>
+  <div class="sc"><div class="sl"></div>Fiscal / DNIT</div>
+  <div class="sc" style="text-align:right;font-size:6pt;"><strong>Projeto:</strong> ${projSel?.codigo||"—"} · <strong>N° registros:</strong> ${linhas.length}<br/><strong>Período:</strong> ${dtIni||"início"} a ${dtFim||"atual"}</div>
+</div>
+<div class="foot">SGLAA – Sistema de Gerenciamento Laboratorial de Asfalto · DNIT 031/2024-ES</div>
+<script>setTimeout(()=>window.print(),450);
+
+// Mount app
+const rootEl = document.getElementById("root");
+const root = ReactDOM.createRoot(rootEl);
+root.render(React.createElement(App));
+</script>
+
+</body>
+</html>
