@@ -6,45 +6,147 @@
   <title>SGLAA – Laboratório de Asfalto</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
-  <header class="top
-      <p>Laboratório de Asfalto • Firebase Online</p>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">SGLAA</div>
+      <div class="sub">Laboratório de Asfalto • Online</div>
     </div>
-    <div class="pill" id="connPill">Conectando…</div>
+
+    <div class="right">
+      <div class="pill" id="connPill">Conectando…</div>
+      <div class="pill warn" id="activeProjPill">Projeto ativo: (nenhum)</div>
+    </div>
   </header>
 
-  <main class="grid">
-    <section class="card">
-      <h2>Teste de Conexão (primeiro passo)</h2>
-      <p class="muted">
-        Se este teste funcionar, então o Firebase + Vercel está OK.
-        Depois a gente coloca os módulos (Projetos, Extração+Granu, Marshall, Estatístico, PDF…).
-      </p>
+  <nav class="tabs">
+    <button class="tab active" data-tab="painel">Painel</button>
+    <button class="tab" data-tab="projetos">Projetos</button>
+    <button class="tab" data-tab="ensaios">Ensaios</button>
+    <button class="tab" data-tab="relatorios">Relatórios</button>
+  </nav>
 
-      <div class="row">
-        <label>Projeto/Obra</label>
-        <input id="obra" placeholder="Ex: ECO Asfalto – FX 12,5" />
-      </div>
-      <div class="row">
-        <label>Técnico</label>
-        <input id="tecnico" placeholder="Nome do laboratorista" />
-      </div>
+  <main class="main">
+    <!-- PAINEL -->
+    <section class="view" id="view-painel">
+      <div class="card">
+        <h2>Painel</h2>
+        <p class="muted">
+          Aqui vai aparecer resumo por período e por projeto (conformes / não conformes, etc).
+          Por enquanto, estamos montando a base: Projetos + Projeto Ativo.
+        </p>
 
-      <button id="btnSalvar">Salvar registro de teste</button>
-      <div class="hint" id="msg"></div>
+        <div class="grid2">
+          <div class="kpi">
+            <div class="kpiTitle">Status Firebase</div>
+            <div class="kpiValue" id="kpiFirebase">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Projetos cadastrados</div>
+            <div class="kpiValue" id="kpiProjetos">—</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="muted">
+          Link do sistema: <a class="link" href="https://sgl-asfalto.vercel.app/" target="_blank" rel="noreferrer">Abrir o app</a>
+        </div>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Últimos registros salvos</h2>
-      <div id="lista" class="list"></div>
+    <!-- PROJETOS -->
+    <section class="view hidden" id="view-projetos">
+      <div class="card">
+        <h2>Projetos (Dosagens)</h2>
+        <p class="muted">
+          Cadastre a dosagem e os limites (granulometria e parâmetros principais).
+          Depois selecione “Projeto Ativo”. Esse projeto vai ser usado nos ensaios.
+        </p>
+
+        <div class="grid2">
+          <div>
+            <label>Nome do Projeto</label>
+            <input id="p_nome" placeholder="Ex: ECO Asfalto – FX 12,5" />
+          </div>
+          <div>
+            <label>Código (opcional)</label>
+            <input id="p_codigo" placeholder="Ex: FX12,5-PU-8" />
+          </div>
+
+          <div>
+            <label>Cliente/Obra (opcional)</label>
+            <input id="p_cliente" placeholder="Ex: EPR Sul de Minas" />
+          </div>
+          <div>
+            <label>Teor CAP projeto (%)</label>
+            <input id="p_pb" placeholder="Ex: 5,20" />
+          </div>
+
+          <div>
+            <label>Tipo de mistura (opcional)</label>
+            <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
+          </div>
+          <div>
+            <label>Tipo de CAP (opcional)</label>
+            <input id="p_cap" placeholder="Ex: CAP 50/70" />
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3>Faixa granulométrica do PROJETO (min e max % passante)</h3>
+        <p class="muted">Preencha só as peneiras que você usa no seu resumo diário (depois a gente amplia).</p>
+
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Peneira</th>
+                <th>Mín (%)</th>
+                <th>Máx (%)</th>
+              </tr>
+            </thead>
+            <tbody id="sieveBody"></tbody>
+          </table>
+        </div>
+
+        <div class="row">
+          <button id="btnSalvarProjeto">Salvar Projeto</button>
+          <div class="msg" id="msgProjeto"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Projetos cadastrados</h2>
+        <div class="muted">Clique em “Ativar” para definir o projeto ativo.</div>
+        <div class="list" id="listaProjetos"></div>
+      </div>
+    </section>
+
+    <!-- ENSAIOS (placeholder) -->
+    <section class="view hidden" id="view-ensaios">
+      <div class="card">
+        <h2>Ensaios</h2>
+        <p class="muted">
+          Próximo passo: criar os formulários de:
+          Extração+Granulometria, Marshall+Rice, RT, Equiv. Areia.
+          Todos puxando limites do Projeto Ativo.
+        </p>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS (placeholder) -->
+    <section class="view hidden" id="view-relatorios">
+      <div class="card">
+        <h2>Relatórios</h2>
+        <p class="muted">
+          Próximo passo: selecionar Projeto + período e gerar PDF diário/estatístico.
+        </p>
+      </div>
     </section>
   </main>
 
-  <footer class="foot">
-    <span class="muted">Quando este teste estiver OK, eu te entrego o SGLAA completo módulo a módulo com rastreabilidade.</span>
-  </footer>
-
-  ./app.jsscript>
-<script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
