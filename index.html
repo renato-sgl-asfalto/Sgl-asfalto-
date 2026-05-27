@@ -240,6 +240,95 @@
 
         <!-- RT -->
         <div class="subview hidden" id="sub-rt">
+          <p class="muted">RT (MPa) = 2F/(π·D·H) × 0,0981 (F em kgf, D e H em cm)</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="t_data" /></div>
+            <div><label>Técnico</label><input id="t_tecnico" /></div>
+            <div><label>Lote</label><input id="t_lote" /></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid2">
+            <div><label>F (kgf)</label><input id="t_F" /></div>
+            <div><label>D (cm)</label><input id="t_D" /></div>
+            <div><label>H (cm)</label><input id="t_H" /></div>
+            <div class="kpi"><div class="kpiTitle">RT (MPa)</div><div class="kpiValue" id="t_rt">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Status</div><div class="kpiValue"><span class="badge" id="t_status">—</span></div><div class="muted" id="t_status_det">—</div></div>
+          </div>
+          <div class="row"><button id="btnSalvarRT">Salvar RT</button><div class="msg" id="msgRT"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos RT (Projeto Ativo)</h3>
+          <div class="list" id="listaRT"></div>
+        </div>
 
+        <!-- SE -->
+        <div class="subview hidden" id="sub-se">
+          <p class="muted">SE (%) = (H2/H1) × 100</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="s_data" /></div>
+            <div><label>Técnico</label><input id="s_tecnico" /></div>
+            <div><label>Lote</label><input id="s_lote" /></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid2">
+            <div><label>H1</label><input id="s_H1" /></div>
+            <div><label>H2</label><input id="s_H2" /></div>
+            <div class="kpi"><div class="kpiTitle">SE (%)</div><div class="kpiValue" id="s_se">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Status</div><div class="kpiValue"><span class="badge" id="s_status">—</span></div><div class="muted" id="s_status_det">—</div></div>
+          </div>
+          <div class="row"><button id="btnSalvarSE">Salvar SE</button><div class="msg" id="msgSE"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos SE (Projeto Ativo)</h3>
+          <div class="list" id="listaSE"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CONTROLE ESTATÍSTICO -->
+    <section class="view hidden" id="view-estatistico">
+      <div class="card">
+        <h2>Controle Estatístico (Resumo)</h2>
+        <div class="grid2">
+          <div><label>Data inicial</label><input type="date" id="c_ini" /></div>
+          <div><label>Data final</label><input type="date" id="c_fim" /></div>
+          <div class="kpi"><div class="kpiTitle">Itens</div><div class="kpiValue" id="c_total">—</div></div>
+          <div class="kpi"><div class="kpiTitle">% Conforme</div><div class="kpiValue" id="c_conf">—</div></div>
+        </div>
+        <div class="row"><button id="btnGerarCtrl">Gerar resumo</button><div class="msg" id="msgCtrl"></div></div>
+        <div class="hr"></div>
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Data</th><th>Lote</th><th>Pb</th><th>Gmm</th><th>Gmb</th><th>Vv</th><th>Estab</th><th>Flow</th><th>RT</th><th>SE</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ctrlBody"></tbody>
+          </table>
+        </div>
+        <div class="hr"></div>
+        <div class="muted" id="ctrlStats">—</div>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section class="view hidden" id="view-relatorios">
+      <div class="card">
+        <h2>Relatórios (Imprimir / Salvar PDF)</h2>
+        <div class="grid2">
+          <div><label>Data inicial</label><input type="date" id="rel_ini" /></div>
+          <div><label>Data final</label><input type="date" id="rel_fim" /></div>
+          <div class="kpi"><div class="kpiTitle">Itens</div><div class="kpiValue" id="rel_total">—</div></div>
+          <div class="kpi"><div class="kpiTitle">% Conforme</div><div class="kpiValue" id="rel_conf">—</div></div>
+        </div>
+        <div class="row"><button id="btnRelatorio">Gerar relatório (Imprimir / PDF)</button><div class="msg" id="msgRelatorio"></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
 <html lang="pt-BR">
 <head>
