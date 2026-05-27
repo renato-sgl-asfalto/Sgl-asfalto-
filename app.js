@@ -620,7 +620,23 @@ function calcularPb() {
 
   if (massa > 0 && agregado >= 0) {
     const pb = ((massa - agregado) / massa) * 100;
-    pbDiv.innerHTML = "<b>Pb (%): </b> " + pb.toFixed(2);
+
+    let status = "";
+
+    // valor de referência (depois vamos puxar do projeto)
+    const pbMin = 4.5;
+    const pbMax = 6.5;
+
+    if (pb >= pbMin && pb <= pbMax) {
+      status = "✅ CONFORME";
+    } else {
+      status = "❌ NÃO CONFORME";
+    }
+
+    pbDiv.innerHTML =
+      "<b>Pb (%): </b> " + pb.toFixed(2) +
+      "<br><b>Status: </b> " + status;
+
   } else {
     pbDiv.innerHTML = "<b>Pb (%): </b> —";
   }
