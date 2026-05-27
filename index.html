@@ -1,7 +1,90 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8sieveBody"></tbody>  <meta charset="utf-8" />
+          </table>
+        </div>
+
+        <div class="row">
+          <button id="btnSalvarProjeto">Salvar Projeto</button>
+          <div class="msg" id="msgProjeto"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Projetos cadastrados</h2>
+        <div class="muted">Clique em “Ativar” para definir o projeto ativo.</div>
+        <div class="list" id="listaProjetos"></div>
+      </div>
+    </section>
+
+    <!-- ENSAIOS -->
+    <section class="view hidden" id="view-ensaios">
+      <div class="card">
+        <h2>Ensaio — Extração (Pb)</h2>
+        <p class="muted">Usa automaticamente o Pb do Projeto Ativo (Pb projeto ± tolerância).</p>
+
+        <div class="grid2">
+          <div>
+            <label>Data</label>
+            <input type="date" id="data" />
+          </div>
+          <div>
+            <label>Técnico</label>
+            <input id="tecnico" placeholder="Nome do técnico" />
+          </div>
+          <div>
+            <label>Lote / Nº Amostra</label>
+            <input id="lote" placeholder="Ex: Lote 01 / Amostra 03" />
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid2">
+          <div>
+            <label>Massa da mistura (g)</label>
+            <input id="massa" placeholder="Ex: 1200" />
+          </div>
+          <div>
+            <label>Massa de agregados (g)</label>
+            <input id="agregado" placeholder="Ex: 1130" />
+          </div>
+
+          <div class="kpi">
+            <div class="kpiTitle">Pb (%)</div>
+            <div class="kpiValue" id="pbOut">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Status</div>
+            <div class="kpiValue"><span class="badge" id="statusOut">—</span></div>
+            <div class="muted" id="limitesOut">Limites Pb: —</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="btnSalvar">Salvar Ensaio</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Últimos ensaios (Projeto ativo)</h2>
+        <div class="list" id="listaEnsaios"></div>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS (placeholder) -->
+    <section class="view hidden" id="view-relatorios">
+      <div class="card">
+        <h2>Relatórios</h2>
+        <p class="muted">Próximo passo: filtro por período + PDF.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SGLAA – Laboratório de Asfalto</title>
   <link rel="stylesheet" href="./styles.css" />
@@ -13,10 +96,9 @@
       <div class="logo">SGLAA</div>
       <div class="sub">Laboratório de Asfalto • Online</div>
     </div>
-
     <div class="right">
       <div class="pill" id="connPill">Conectando…</div>
-      <div class="pill warn" id="activeProjPill">Projeto ativo: (nenhum)</div>
+      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
     </div>
   </header>
 
@@ -32,10 +114,7 @@
     <section class="view" id="view-painel">
       <div class="card">
         <h2>Painel</h2>
-        <p class="muted">
-          Aqui vai aparecer resumo por período e por projeto (conformes / não conformes, etc).
-          Por enquanto, estamos montando a base: Projetos + Projeto Ativo.
-        </p>
+        <p class="muted">Status do sistema e contagem de projetos.</p>
 
         <div class="grid2">
           <div class="kpi">
@@ -49,9 +128,7 @@
         </div>
 
         <div class="hr"></div>
-        <div class="muted">
-          Link do sistema: <a class="link" href="https://sgl-asfalto.vercel.app/" target="_blank" rel="noreferrer">Abrir o app</a>
-        </div>
+        <div class="muted">Link: <a class="link" href="https://sgl-asfalto.vercel.app/" target="_blank" rel="noreferrer">Abrir o app</a></div>
       </div>
     </section>
 
@@ -59,10 +136,7 @@
     <section class="view hidden" id="view-projetos">
       <div class="card">
         <h2>Projetos (Dosagens)</h2>
-        <p class="muted">
-          Cadastre a dosagem e os limites (granulometria e parâmetros principais).
-          Depois selecione “Projeto Ativo”. Esse projeto vai ser usado nos ensaios.
-        </p>
+        <p class="muted">Cadastre Pb do projeto e tolerância (±). Cadastre também a faixa granulométrica (min/max por peneira).</p>
 
         <div class="grid2">
           <div>
@@ -81,25 +155,26 @@
           <div>
             <label>Teor CAP projeto (%)</label>
             <input id="p_pb" placeholder="Ex: 5,20" />
+          </div>
+
+          <div>
             <label>Tolerância do Pb (± %)</label>
-<input id="p_pbtol" placeholder="Ex: 0,30" />
+            <input id="p_pbtol" placeholder="Ex: 0,30" />
+          </div>
+          <div>
+            <label>Tipo de CAP (opcional)</label>
+            <input id="p_cap" placeholder="Ex: CAP 50/70" />
           </div>
 
           <div>
             <label>Tipo de mistura (opcional)</label>
             <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
           </div>
-          <div>
-            <label>Tipo de CAP (opcional)</label>
-            <input id="p_cap" placeholder="Ex: CAP 50/70" />
-          </div>
         </div>
 
         <div class="hr"></div>
 
         <h3>Faixa granulométrica do PROJETO (min e max % passante)</h3>
-        <p class="muted">Preencha só as peneiras que você usa no seu resumo diário (depois a gente amplia).</p>
-
         <div class="tableWrap">
           <table class="tbl">
             <thead>
@@ -109,67 +184,3 @@
                 <th>Máx (%)</th>
               </tr>
             </thead>
-            <tbody id="sieveBody"></tbody>
-          </table>
-        </div>
-
-        <div class="row">
-          <button id="btnSalvarProjeto">Salvar Projeto</button>
-          <div class="msg" id="msgProjeto"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Projetos cadastrados</h2>
-        <div class="muted">Clique em “Ativar” para definir o projeto ativo.</div>
-        <div class="list" id="listaProjetos"></div>
-      </div>
-    </section>
-
-    <!-- ENSAIOS (placeholder) -->
-   <section class="view hidden" id="view-ensaios">
-
-  <div class="card">
-  <h2>Ensaios - Extração</h2>
-
-  <label>Data</label>
-  <input type="date" id="data" />
-
-  <label>Técnico</label>
-  <input id="tecnico" placeholder="Nome do técnico" />
-
-  <label>Lote</label>
-  <input id="lote" placeholder="Ex: Lote 01" />
-
-  <label>Massa da mistura (g)</label>
-  <input id="massa" placeholder="Ex: 1200" />
-
-  <label>Massa de agregados (g)</label>
-  <input id="agregado" placeholder="Ex: 1130" />
-
-  <p><b>Pb (%) será calculado automaticamente</b></p>
-
-  <button id="btnSalvar">Salvar Ensaio</button>
-</div>
-
-</section>
-    </section>
-
-    <!-- RELATÓRIOS (placeholder) -->
-    <section class="view hidden" id="view-relatorios">
-      <div class="card">
-        <h2>Relatórios</h2>
-        <p class="muted">
-          Próximo passo: selecionar Projeto + período e gerar PDF diário/estatístico.
-        </p>
-      </div>
-    </section>
-  </main>
-
-
-
-<script type="module" src="./app.js"></script>
-</body>
-</html>
-
-
