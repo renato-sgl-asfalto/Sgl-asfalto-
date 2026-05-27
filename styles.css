@@ -1,8 +1,6 @@
 :root{
   --bg:#0b0f14;
-  --card:#101824;
-  --txt:#e8eef6;
-  --muted:#9bb0c7;
+  --muted:#9bb0c7;  --card:#101824;
   --line:#1c2a3d;
   --btn:#f2c14e;
   --btnTxt:#1a1405;
@@ -89,8 +87,6 @@ button:active{transform:translateY(1px)}
   padding:8px 10px;border-radius:12px;font-weight:800;cursor:pointer;font-size:12px;
 }
 .btn2.danger{border-color:rgba(255,92,92,.35);color:var(--bad)}
-.link{color:var(--warn);text-decoration:none}
-.link:hover{text-decoration:underline}
 
 .kpi{border:1px solid var(--line);border-radius:14px;background:#0c1420;padding:12px}
 .kpiTitle{color:var(--muted);font-size:12px;font-weight:800}
@@ -106,3 +102,5 @@ button:active{transform:translateY(1px)}
 }
 .badge.ok{border-color:rgba(57,217,138,.5); color:var(--ok);}
 .badge.bad{border-color:rgba(255,92,92,.5); color:var(--bad);}
+``
+  --txt:#e8eef6;
