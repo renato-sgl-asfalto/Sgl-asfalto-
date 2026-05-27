@@ -1,10 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";import { initializeApp } from "https://import {
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import {
   getFirestore, collection, addDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, limit
 } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-/* Firebase */
+/* Firebase (seu) */
 const firebaseConfig = {
   apiKey: "AIzaSyCvYQYm9vZpkZ2tKMm-4zouYoI71Wb9ldc",
   authDomain: "sgq-asfalto.firebaseapp.com",
@@ -16,7 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* Helpers */
+/* Utils */
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>Array.from(document.querySelectorAll(s));
 function nOrNull(v){ const x=String(v??"").replace(",",".").trim(); if(!x) return null; const n=Number(x); return Number.isFinite(n)?n:null; }
@@ -47,7 +48,13 @@ function setActiveText(t){ if(activeProjPill) activeProjPill.textContent=t; }
 /* Tabs */
 (() => {
   const tabs = $$(".tab");
-  const views = { painel: $("#view-painel"), projetos: $("#view-projetos"), ensaios: $("#view-ensaios") };
+  const views = {
+    painel: $("#view-painel"),
+    projetos: $("#view-projetos"),
+    ensaios: $("#view-ensaios"),
+    estatistico: $("#view-estatistico"),
+    relatorios: $("#view-relatorios"),
+  };
   tabs.forEach(btn=>{
     btn.addEventListener("click", ()=>{
       tabs.forEach(b=>b.classList.remove("active"));
@@ -55,6 +62,28 @@ function setActiveText(t){ if(activeProjPill) activeProjPill.textContent=t; }
       const id = btn.dataset.tab;
       Object.values(views).forEach(v=>v && v.classList.add("hidden"));
       views[id] && views[id].classList.remove("hidden");
+    });
+  });
+})();
+
+/* Subtabs Ensaios */
+(() => {
+  const subtabs = $$(".subtab");
+  if(!subtabs.length) return;
+  const subviews = {
+    extrgranu: $("#sub-extrgranu"),
+    rice: $("#sub-rice"),
+    marshall: $("#sub-marshall"),
+    rt: $("#sub-rt"),
+    se: $("#sub-se"),
+  };
+  subtabs.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      subtabs.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      const id = btn.dataset.sub;
+      Object.values(subviews).forEach(v=>v && v.classList.add("hidden"));
+      subviews[id] && subviews[id].classList.remove("hidden");
     });
   });
 })();
@@ -82,7 +111,7 @@ const btnSalvarProjeto = $("#btnSalvarProjeto");
 const msgProjeto = $("#msgProjeto");
 const listaProjetos = $("#listaProjetos");
 
-/* peneiras */
+/* peneiras padrão */
 const SIEVES = ['3/4"', '1/2"', '3/8"', '1/4"', '#4', '#8', '#16', '#30', '#50', '#100', '#200'];
 
 function buildProjectSieveRows(){
@@ -182,9 +211,6 @@ onSnapshot(qProjects, (snap)=>{
     `;
     listaProjetos.appendChild(el);
   });
-}, (err)=>{
-  console.error(err);
-  setConn("Erro Firestore", false);
 });
 
 /* ações projeto */
@@ -216,13 +242,13 @@ if(listaProjetos){
   });
 }
 
-/* ENSAIOS - Extração + Granu */
+/* ENSAIO CORRIGIDO (Extração+Granu) */
 const e_data=$("#e_data");
 const e_tecnico=$("#e_tecnico");
 const e_lote=$("#e_lote");
 const e_obs=$("#e_obs");
 const e_mmix=$("#e_mmix");   // COM betume
-const e_magg=$("#e_magg");   // SEM betume (após extração)
+const e_magg=$("#e_magg");   // SEM betume
 const e_kf=$("#e_kf");
 const e_pb=$("#e_pb");
 const e_pb_lim=$("#e_pb_lim");
@@ -276,33 +302,29 @@ function getRetidos(){
   return ret;
 }
 
-/* ✅ CÁLCULO CORRIGIDO */
+/* ✅ Cálculo correto */
 function calcExtrGranu(){
-  const Mmix = nOrNull(e_mmix?.value);  // COM betume
-  const Magg = nOrNull(e_magg?.value);  // SEM betume (após extração)
+  const Mmix = nOrNull(e_mmix?.value);  // com betume
+  const Magg = nOrNull(e_magg?.value);  // sem betume
   const kf   = nOrZero(e_kf?.value);
 
   const ret = getRetidos();
   const sumRet = Object.values(ret).reduce((a,b)=>a+(Number(b)||0),0);
 
-  // Pb usando Mmix e Magg (correto) 【1-21ba13】
+  // Pb% correto: ((Mmix - Magg)/Mmix)*100 + kf 【1-938ae9】
   let pb = null;
-  if (Mmix && Mmix > 0 && Magg !== null && Magg >= 0) {
-    pb = ((Mmix - Magg) / Mmix) * 100 + kf;
-  }
+  if (Mmix && Mmix > 0 && Magg !== null && Magg >= 0) pb = ((Mmix - Magg)/Mmix)*100 + kf;
   if(e_pb) e_pb.textContent = (pb===null || !Number.isFinite(pb)) ? "—" : pb.toFixed(2);
 
-  // Fechamento (%): controle do peneiramento
-  let fech = null;
-  if (Magg && Magg > 0) {
-    fech = ((Magg - sumRet) / Magg) * 100;
-  }
-  if (e_fech) e_fech.textContent = (fech===null || !Number.isFinite(fech)) ? "—" : fech.toFixed(2) + "%";
-
-  const limPb=pbLimits();
+  const limPb = pbLimits();
   if(e_pb_lim) e_pb_lim.textContent = `Limites: ${limPb.min.toFixed(2)} a ${limPb.max.toFixed(2)}`;
 
-  // Granulometria sobre Magg (massa sem betume) 【2-9d5854】
+  // Fechamento: ((Magg - Σret)/Magg)*100 (controle)
+  let fech = null;
+  if (Magg && Magg>0) fech = ((Magg - sumRet)/Magg)*100;
+  if (e_fech) e_fech.textContent = (fech===null || !Number.isFinite(fech)) ? "—" : fech.toFixed(2)+"%";
+
+  // Granulometria sobre Magg (massa sem betume) 【2-5563a9】
   let cum=0;
   let anyCheck=false;
   let allOk=true;
@@ -317,7 +339,7 @@ function calcExtrGranu(){
     const pass = (Magg && Magg>0) ? (100 - (cum/Magg)*100) : null;
     if(passCell) passCell.textContent = (pass===null || !Number.isFinite(pass)) ? "—" : pass.toFixed(1);
 
-    const lim = (ACTIVE_PROJECT?.sieveLimits && ACTIVE_PROJECT.sieveLimits[sv]) ? ACTIVE_PROJECT.sieveLimits[sv] : null;
+    const lim=(ACTIVE_PROJECT?.sieveLimits && ACTIVE_PROJECT.sieveLimits[sv]) ? ACTIVE_PROJECT.sieveLimits[sv] : null;
     if(lim && pass!==null && Number.isFinite(pass)){
       anyCheck=true;
       let ok=true;
@@ -357,6 +379,7 @@ if(e_mmix) e_mmix.addEventListener("input", calcExtrGranu);
 if(e_magg) e_magg.addEventListener("input", calcExtrGranu);
 if(e_kf)   e_kf.addEventListener("input", calcExtrGranu);
 
+/* salvar */
 async function saveExtrGranu(){
   if(!ACTIVE_PROJECT_ID){
     showMsg(msgEnsaio,"Sem projeto ativo. Vá em Projetos e clique Ativar.",false);
@@ -365,7 +388,7 @@ async function saveExtrGranu(){
 
   const Mmix=nOrNull(e_mmix?.value);
   const Magg=nOrNull(e_magg?.value);
-  if(!Mmix || Mmix<=0 || Magg===null || Magg<=0){
+  if(!Mmix || Mmix<=0 || !Magg || Magg<=0){
     showMsg(msgEnsaio,"Preencha Massa COM betume e Massa SEM betume.",false);
     return;
   }
@@ -374,7 +397,7 @@ async function saveExtrGranu(){
   const ret=getRetidos();
   const sumRet = Object.values(ret).reduce((a,b)=>a+(Number(b)||0),0);
 
-  const pb=((Mmix - Magg)/Mmix)*100 + kf; // correto 【1-21ba13】
+  const pb=((Mmix - Magg)/Mmix)*100 + kf;
   const limPb=pbLimits();
   const pbOk=(pb>=limPb.min && pb<=limPb.max);
 
@@ -512,4 +535,4 @@ onSnapshot(activeRef, async ()=>{
 setConn("Online (Firestore)", true);
 setActiveText("Projeto ativo: (carregando)");
 refreshActiveProject().catch(()=>{});
-
+``
