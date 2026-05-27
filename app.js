@@ -500,7 +500,6 @@ function refreshEnsaiosList() {
 setConn("Online (Firestore)", true);
 if (e_data && !e_data.value) e_data.value = todayISO();
 loadActiveProjectOnce().then(refreshActiveProject).catch(()=>{});
-
 // ---------- ENSAIO REAL ----------// ---------- ENSconst btnSalvar = document.querySelector("#view-ensaios button");
 
 if (btnSalvar) {
@@ -514,5 +513,18 @@ if (btnSalvar) {
     try {
       await addDoc(collection(db, "ensaios"), {
         data: data || "",
+        tecnico: tecnico || "",
+        lote: lote || "",
+        massa: massa || "",
+        createdAt: new Date().toISOString()
+      });
 
+      alert("✅ Ensaio salvo com sucesso!");
 
+    } catch (e) {
+      console.error(e);
+      alert("❌ Erro ao salvar");
+    }
+
+  });
+}
