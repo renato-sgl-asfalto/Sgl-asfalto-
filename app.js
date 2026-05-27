@@ -5,6 +5,7 @@ import {
   setDoc, getDoc, where, limit
 } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
+/* ====== Firebase (SEU) ====== */
 const firebaseConfig = {
   apiKey: "AIzaSyCvYQYm9vZpkZ2tKMm-4zouYoI71Wb9ldc",
   authDomain: "sgq-asfalto.firebaseapp.com",
@@ -17,42 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ---------- UI refs ---------- */
-const connPill = document.getElementById("connPill");
-const activeProjPill = document.getElementById("activeProjPill");
-const kpiFirebase = document.getElementById("kpiFirebase");
-const kpiProjetos = document.getElementById("kpiProjetos");
-
-const tabs = Array.from(document.querySelectorAll(".tab"));
-const views = {
-  painel: document.getElementById("view-painel"),
-  projetos: document.getElementById("view-projetos"),
-  ensaios: document.getElementById("view-ensaios"),
-  relatorios: document.getElementById("view-relatorios")
-};
-
-tabs.forEach(btn => {
-  btn.addEventListener("click", () => {
-    tabs.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    const id = btn.dataset.tab;
-    Object.values(views).forEach(v => v.classList.add("hidden"));
-    views[id].classList.remove("hidden");
-  });
-});
-
-/* ---------- Helpers ---------- */
-function setConn(texto, ok = true) {
-  connPill.textContent = texto;
-  connPill.style.borderColor = ok ? "rgba(57,217,138,.4)" : "rgba(255,92,92,.4)";
-  connPill.style.color = ok ? "#39d98a" : "#ff5c5c";
-  if (kpiFirebase) kpiFirebase.textContent = ok ? "Online" : "Erro";
-}
-function showMsg(el, texto, ok = true) {
-  if (!el) return;
-  el.textContent = texto;
-  el.style.color = ok ? "#39d98a" : "#ff5c5c";
-}
+/* ====== Helpers ====== */
 function nOrNull(v) {
   const x = String(v ?? "").replace(",", ".").trim();
   if (!x) return null;
@@ -71,7 +37,43 @@ function escapeHtml(s){
   }[c]));
 }
 
-/* ---------- Active project ---------- */
+/* ====== UI refs (pode ser null sem quebrar) ====== */
+const connPill = document.getElementById("connPill");
+const activeProjPill = document.getElementById("activeProjPill");
+const kpiFirebase = document.getElementById("kpiFirebase");
+const kpiProjetos = document.getElementById("kpiProjetos");
+
+function setConn(texto, ok = true) {
+  if (connPill) {
+    connPill.textContent = texto;
+    connPill.style.borderColor = ok ? "rgba(57,217,138,.4)" : "rgba(255,92,92,.4)";
+    connPill.style.color = ok ? "#39d98a" : "#ff5c5c";
+  }
+  if (kpiFirebase) kpiFirebase.textContent = ok ? "Online" : "Erro";
+}
+function setActiveText(txt) {
+  if (activeProjPill) activeProjPill.textContent = txt;
+}
+
+/* ====== Tabs ====== */
+const tabs = Array.from(document.querySelectorAll(".tab"));
+const views = {
+  painel: document.getElementById("view-painel"),
+  projetos: document.getElementById("view-projetos"),
+  ensaios: document.getElementById("view-ensaios"),
+  relatorios: document.getElementById("view-relatorios")
+};
+tabs.forEach(btn => {
+  btn.addEventListener("click", () => {
+    tabs.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const id = btn.dataset.tab;
+    Object.values(views).forEach(v => v && v.classList.add("hidden"));
+    views[id] && views[id].classList.remove("hidden");
+  });
+});
+
+/* ====== Active project (meta/active) ====== */
 const activeRef = doc(db, "meta", "active");
 let ACTIVE_PROJECT_ID = null;
 let ACTIVE_PROJECT = null;
@@ -79,33 +81,30 @@ let ACTIVE_PROJECT = null;
 async function setActiveProject(projectId) {
   await setDoc(activeRef, { projectId, updatedAt: serverTimestamp() }, { merge: true });
 }
-async function loadActiveProjectOnce() {
-  const snap = await getDoc(activeRef);
-  ACTIVE_PROJECT_ID = snap.exists() ? (snap.data().projectId || null) : null;
-}
-function updateActivePill() {
+async function refreshActiveProject() {
   if (!ACTIVE_PROJECT_ID) {
-    activeProjPill.textContent = "Projeto ativo: (nenhum)";
+    ACTIVE_PROJECT = null;
+    setActiveText("Projeto ativo: (nenhum)");
+    applyProjectToPbRule();
+    refreshEnsaiosList();
     return;
   }
-  if (ACTIVE_PROJECT?.nome) {
-    activeProjPill.textContent = "Projeto ativo: " + ACTIVE_PROJECT.nome;
-  } else {
-    activeProjPill.textContent = "Projeto ativo: (definido)";
-  }
+  const pSnap = await getDoc(doc(db, "projects", ACTIVE_PROJECT_ID));
+  ACTIVE_PROJECT = pSnap.exists() ? pSnap.data() : null;
+  setActiveText("Projeto ativo: " + (ACTIVE_PROJECT?.nome || "(sem nome)"));
+  applyProjectToPbRule();
+  refreshEnsaiosList();
 }
 
 onSnapshot(activeRef, async (snap) => {
   ACTIVE_PROJECT_ID = snap.exists() ? (snap.data().projectId || null) : null;
-  ACTIVE_PROJECT = null;
-  updateActivePill();
   await refreshActiveProject();
 }, (err) => {
   console.error(err);
-  updateActivePill();
+  setActiveText("Projeto ativo: (erro)");
 });
 
-/* ---------- Projects CRUD ---------- */
+/* ====== PROJETOS ====== */
 const sieveBody = document.getElementById("sieveBody");
 const p_nome = document.getElementById("p_nome");
 const p_codigo = document.getElementById("p_codigo");
@@ -114,27 +113,8 @@ const p_pb = document.getElementById("p_pb");
 const p_pbtol = document.getElementById("p_pbtol");
 const p_mistura = document.getElementById("p_mistura");
 const p_cap = document.getElementById("p_cap");
-// ---------- BOTÃO ENSAIO (CORRETO) ----------
-const btnSalvar = document.querySelector("#view-ensaios button");
 
-if (btnSalvar) {
-  btnSalvar.addEventListener("click", async () => {
-    const massa = document.querySelector("#view-ensaios input")?.value || "";
-
-    try {
-      await addDoc(collection(db, "ensaios"), {
-        massa,
-        data: new Date().toISOString()
-      });
-
-      alert("✅ Ensaio salvo!");
-    } catch (e) {
-      console.error(e);
-      alert("❌ Erro ao salvar (veja o Console)");
-    }
-  });
-}
-``
+const btnSalvarProjeto = document.getElementById("btnSalvarProjeto");
 const msgProjeto = document.getElementById("msgProjeto");
 const listaProjetos = document.getElementById("listaProjetos");
 
@@ -170,12 +150,17 @@ function readSieveLimits(bodyEl) {
   });
   return limits;
 }
-
+function showMsg(el, texto, ok=true){
+  if (!el) return;
+  el.textContent = texto;
+  el.style.color = ok ? "#39d98a" : "#ff5c5c";
+}
 function clearProjectForm() {
   if (p_nome) p_nome.value = "";
   if (p_codigo) p_codigo.value = "";
   if (p_cliente) p_cliente.value = "";
   if (p_pb) p_pb.value = "";
+  if (p_pbtol) p_pbtol.value = "";
   if (p_mistura) p_mistura.value = "";
   if (p_cap) p_cap.value = "";
   if (sieveBody) Array.from(sieveBody.querySelectorAll("input")).forEach(i => (i.value = ""));
@@ -186,32 +171,36 @@ const qProjects = query(projectsCol, orderBy("createdAt", "desc"));
 
 if (btnSalvarProjeto) {
   btnSalvarProjeto.addEventListener("click", async () => {
-    const nome = p_nome.value.trim();
+    const nome = (p_nome?.value || "").trim();
     if (!nome) { showMsg(msgProjeto, "Preencha o Nome do Projeto.", false); return; }
+
     const data = {
       nome,
-      codigo: p_codigo.value.trim() || null,
-      cliente: p_cliente.value.trim() || null,
-      pbProjeto: nOrNull(p_pb.value),
-      mistura: p_mistura.value.trim() || null,
-      cap: p_cap.value.trim() || null,
-      sieveLimits: readSieveLimits(sieveBody),
-      createdAt: serverTimestamp()
+      codigo: (p_codigo?.value || "").trim() || null,
+      cliente: (p_cliente?.value || "").trim() || null,
+      mistura: (p_mistura?.value || "").trim() || null,
+      cap: (p_cap?.value || "").trim() || null,
+
+      pbProjeto: nOrNull(p_pb?.value),
       pbTol: nOrNull(p_pbtol?.value) ?? 0.3,
+
+      sieveLimits: sieveBody ? readSieveLimits(sieveBody) : {},
+      createdAt: serverTimestamp()
     };
+
     try {
       await addDoc(projectsCol, data);
       showMsg(msgProjeto, "Projeto salvo com sucesso!", true);
       clearProjectForm();
     } catch (e) {
       console.error(e);
-      showMsg(msgProjeto, "Falha ao salvar. Abra o Console (F12).", false);
+      showMsg(msgProjeto, "Falha ao salvar (veja Console).", false);
     }
   });
 }
 
 if (listaProjetos) {
-  onSnapshot(qProjects, async (snap) => {
+  onSnapshot(qProjects, (snap) => {
     setConn("Online (Firestore)", true);
     if (kpiProjetos) kpiProjetos.textContent = String(snap.size);
 
@@ -219,17 +208,20 @@ if (listaProjetos) {
       listaProjetos.innerHTML = `<div class="muted">Nenhum projeto cadastrado ainda.</div>`;
       return;
     }
+    listaProjetos.innerHTML = "";
 
-    const items = [];
     snap.forEach(d => {
       const p = d.data();
       const isActive = d.id === ACTIVE_PROJECT_ID;
+
       const el = document.createElement("div");
       el.className = "item";
       el.innerHTML = `
         <div>
           <b>${escapeHtml(p.nome)}</b>
-          <div class="meta">Código: ${escapeHtml(p.codigo || "—")} • CAP proj: ${p.pbProjeto ?? "—"}% • Mistura: ${escapeHtml(p.mistura || "—")}</div>
+          <div class="meta">
+            Código: ${escapeHtml(p.codigo || "—")} • Pb proj: ${p.pbProjeto ?? "—"}% ± ${p.pbTol ?? 0.3} • Mistura: ${escapeHtml(p.mistura || "—")}
+          </div>
           <div class="meta">Cliente/Obra: ${escapeHtml(p.cliente || "—")} • CAP: ${escapeHtml(p.cap || "—")}</div>
           <div class="meta">${isActive ? "✅ ATIVO" : ""}</div>
         </div>
@@ -238,15 +230,11 @@ if (listaProjetos) {
           <button class="btn2 danger" data-act="apagar" data-id="${d.id}">Apagar</button>
         </div>
       `;
-      items.push(el);
+      listaProjetos.appendChild(el);
     });
-
-    listaProjetos.innerHTML = "";
-    items.forEach(el => listaProjetos.appendChild(el));
   }, (err) => {
     console.error(err);
     setConn("Erro Firestore", false);
-    if (kpiProjetos) kpiProjetos.textContent = "—";
   });
 
   listaProjetos.addEventListener("click", async (ev) => {
@@ -271,213 +259,103 @@ if (listaProjetos) {
       }
     } catch (e) {
       console.error(e);
-      showMsg(msgProjeto, "Falha. Abra o Console (F12).", false);
+      showMsg(msgProjeto, "Falha (veja Console).", false);
     }
   });
 }
 
-/* ---------- Load active project data ---------- */
-async function refreshActiveProject() {
-  if (!ACTIVE_PROJECT_ID) { ACTIVE_PROJECT = null; updateActivePill(); rebuildEnsSieveTable(); refreshEnsaiosList(); return; }
-  try {
-    const pSnap = await getDoc(doc(db, "projects", ACTIVE_PROJECT_ID));
-    ACTIVE_PROJECT = pSnap.exists() ? pSnap.data() : null;
-    updateActivePill();
-    rebuildEnsSieveTable();
-    refreshEnsaiosList();
-  } catch (e) {
-    console.error(e);
-    ACTIVE_PROJECT = null;
-    updateActivePill();
-  }
-}
-
-/* ---------- ENSAIOS: Extração + Granulometria ---------- */
-const e_data = document.getElementById("e_data");
-const e_tecnico = document.getElementById("e_tecnico");
-const e_lote = document.getElementById("e_lote");
-const e_obs = document.getElementById("e_obs");
-const e_mmix = document.getElementById("e_mmix");
-const e_kf = document.getElementById("e_kf");
-const e_pb = document.getElementById("e_pb");
-const e_status = document.getElementById("e_status");
-const ensSieveBody = document.getElementById("ensSieveBody");
-const btnSalvarEnsaio = document.getElementById("btnSalvarEnsaio");
-const msgEnsaio = document.getElementById("msgEnsaio");
+/* ====== ENSAIOS (Extração simples: massa mistura + massa agregados) ====== */
+const e_data = document.getElementById("data");
+const e_tecnico = document.getElementById("tecnico");
+const e_lote = document.getElementById("lote");
+const e_massa = document.getElementById("massa");
+const e_agregado = document.getElementById("agregado");
+const btnSalvarEnsaio = document.getElementById("btnSalvar");
+const pbOut = document.getElementById("pbOut");
+const statusOut = document.getElementById("statusOut");
+const limitesOut = document.getElementById("limitesOut");
 const listaEnsaios = document.getElementById("listaEnsaios");
 
 if (e_data && !e_data.value) e_data.value = todayISO();
 
-function rebuildEnsSieveTable() {
-  if (!ensSieveBody) return;
-  ensSieveBody.innerHTML = "";
+let pbMin = 4.5;
+let pbMax = 6.5;
 
-  SIEVES.forEach(sv => {
-    const lim = (ACTIVE_PROJECT?.sieveLimits && ACTIVE_PROJECT.sieveLimits[sv]) ? ACTIVE_PROJECT.sieveLimits[sv] : {min:null,max:null};
-    const key = sv.replace(/[^a-z0-9]/gi,'_');
+function applyProjectToPbRule() {
+  const pbRef = Number(ACTIVE_PROJECT?.pbProjeto ?? NaN);
+  const tol = Number(ACTIVE_PROJECT?.pbTol ?? 0.3);
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><b>${escapeHtml(sv)}</b></td>
-      <td><input class="ret" data-sv="${escapeHtml(sv)}" placeholder="0" /></td>
-      <td id="pass_${key}">—</td>
-      <td>${lim.min ?? "—"}</td>
-      <td>${lim.max ?? "—"}</td>
-      <td id="ok_${key}">—</td>
-    `;
-    ensSieveBody.appendChild(tr);
-  });
-
-  Array.from(ensSieveBody.querySelectorAll("input.ret")).forEach(inp=>{
-    inp.addEventListener("input", calcEnsaio);
-  });
-  if (e_mmix) e_mmix.addEventListener("input", calcEnsaio);
-  if (e_kf) e_kf.addEventListener("input", calcEnsaio);
-
-  calcEnsaio();
+  if (Number.isFinite(pbRef)) {
+    pbMin = pbRef - tol;
+    pbMax = pbRef + tol;
+  } else {
+    pbMin = 4.5; pbMax = 6.5;
+  }
+  if (limitesOut) limitesOut.textContent = `Limites Pb: ${pbMin.toFixed(2)} a ${pbMax.toFixed(2)}`;
+  calcPbAndStatus();
 }
 
-function getRetidos() {
-  const ret = {};
-  if (!ensSieveBody) return ret;
-  Array.from(ensSieveBody.querySelectorAll("input.ret")).forEach(inp=>{
-    const sv = inp.dataset.sv;
-    ret[sv] = nOrNull(inp.value) ?? 0;
-  });
-  return ret;
-}
+function calcPbAndStatus() {
+  const massa = nOrNull(e_massa?.value);
+  const agregado = nOrNull(e_agregado?.value);
 
-function calcEnsaio() {
-  if (!ensSieveBody) return;
+  if (!massa || massa <= 0 || agregado === null || agregado < 0) {
+    if (pbOut) pbOut.textContent = "—";
+    if (statusOut) { statusOut.textContent = "—"; statusOut.className = "badge"; }
+    return;
+  }
 
-  const Mmix = nOrNull(e_mmix?.value) ?? null;
-  const kf = nOrNull(e_kf?.value) ?? 0;
+  const pb = ((massa - agregado) / massa) * 100;
+  if (pbOut) pbOut.textContent = pb.toFixed(2);
 
-  const ret = getRetidos();
-  const totalAgg = Object.values(ret).reduce((a,b)=>a+(Number(b)||0),0);
-
-  let Pb = null;
-  if (Mmix && Mmix > 0) Pb = ((Mmix - totalAgg) / Mmix) * 100 + (kf || 0);
-  if (e_pb) e_pb.textContent = (Pb === null || !Number.isFinite(Pb)) ? "—" : Pb.toFixed(2);
-
-  let allOk = true;
-  let anyChecked = false;
-  let cumRet = 0;
-
-  SIEVES.forEach(sv => {
-    const r = Number(ret[sv] || 0);
-    cumRet += r;
-
-    let pass = null;
-    if (totalAgg > 0) pass = 100 - (cumRet / totalAgg) * 100;
-
-    const key = sv.replace(/[^a-z0-9]/gi,'_');
-    const passCell = document.getElementById("pass_" + key);
-    const okCell = document.getElementById("ok_" + key);
-
-    if (passCell) passCell.textContent = (pass === null || !Number.isFinite(pass)) ? "—" : pass.toFixed(1);
-
-    const lim = (ACTIVE_PROJECT?.sieveLimits && ACTIVE_PROJECT.sieveLimits[sv]) ? ACTIVE_PROJECT.sieveLimits[sv] : null;
-    if (lim && pass !== null && Number.isFinite(pass)) {
-      anyChecked = true;
-      const min = (lim.min ?? null);
-      const max = (lim.max ?? null);
-
-      let ok = true;
-      if (min !== null && pass < min) ok = false;
-      if (max !== null && pass > max) ok = false;
-
-      if (okCell) okCell.textContent = ok ? "OK" : "NC";
-      if (!ok) allOk = false;
-    } else {
-      if (okCell) okCell.textContent = "—";
-    }
-  });
-
-  if (e_status) {
-    if (!ACTIVE_PROJECT_ID) {
-      e_status.textContent = "Sem Projeto Ativo";
-      e_status.style.color = "#ffd166";
-    } else if (!anyChecked) {
-      e_status.textContent = "Sem limites no projeto";
-      e_status.style.color = "#ffd166";
-    } else {
-      e_status.textContent = allOk ? "CONFORME" : "NÃO CONFORME";
-      e_status.style.color = allOk ? "#39d98a" : "#ff5c5c";
-    }
+  const ok = (pb >= pbMin && pb <= pbMax);
+  if (statusOut) {
+    statusOut.textContent = ok ? "CONFORME" : "NÃO CONFORME";
+    statusOut.className = "badge " + (ok ? "ok" : "bad");
   }
 }
 
-const ensaiosCol = collection(db, "assays_extr_gran");
+if (e_massa) e_massa.addEventListener("input", calcPbAndStatus);
+if (e_agregado) e_agregado.addEventListener("input", calcPbAndStatus);
 
-async function salvarEnsaio() {
-  if (!ACTIVE_PROJECT_ID) { showMsg(msgEnsaio, "Sem Projeto Ativo. Vá em Projetos e clique Ativar.", false); return; }
+const ensaiosCol = collection(db, "ensaios_extracao");
 
-  const dataISO = e_data?.value || todayISO();
-  const tecnico = (e_tecnico?.value || "").trim();
-  const lote = (e_lote?.value || "").trim();
-  const obs = (e_obs?.value || "").trim();
+if (btnSalvarEnsaio) {
+  btnSalvarEnsaio.addEventListener("click", async () => {
+    if (!ACTIVE_PROJECT_ID) { alert("Sem Projeto Ativo. Vá em Projetos e clique Ativar."); return; }
 
-  const Mmix = nOrNull(e_mmix?.value);
-  if (!Mmix || Mmix <= 0) { showMsg(msgEnsaio, "Preencha a Massa da mistura (g).", false); return; }
+    const massa = nOrNull(e_massa?.value);
+    const agregado = nOrNull(e_agregado?.value);
+    if (!massa || massa <= 0 || agregado === null || agregado < 0) { alert("Preencha massa e agregados."); return; }
 
-  const kf = nOrNull(e_kf?.value) ?? 0;
-  const ret = getRetidos();
-  const totalAgg = Object.values(ret).reduce((a,b)=>a+(Number(b)||0),0);
-  const Pb = ((Mmix - totalAgg) / Mmix) * 100 + (kf || 0);
+    const pb = ((massa - agregado) / massa) * 100;
+    const ok = (pb >= pbMin && pb <= pbMax);
 
-  const passMap = {};
-  let cumRet = 0;
-  SIEVES.forEach(sv=>{
-    cumRet += Number(ret[sv]||0);
-    const pass = totalAgg>0 ? 100 - (cumRet/totalAgg)*100 : null;
-    passMap[sv] = (pass===null || !Number.isFinite(pass)) ? null : Number(pass.toFixed(2));
-  });
-
-  let allOk = true;
-  let anyChecked = false;
-  SIEVES.forEach(sv=>{
-    const lim = (ACTIVE_PROJECT?.sieveLimits && ACTIVE_PROJECT.sieveLimits[sv]) ? ACTIVE_PROJECT.sieveLimits[sv] : null;
-    const pass = passMap[sv];
-    if (lim && pass !== null) {
-      anyChecked = true;
-      const min = (lim.min ?? null), max = (lim.max ?? null);
-      if (min !== null && pass < min) allOk = false;
-      if (max !== null && pass > max) allOk = false;
+    try {
+      await addDoc(ensaiosCol, {
+        projectId: ACTIVE_PROJECT_ID,
+        projectName: ACTIVE_PROJECT?.nome || null,
+        data: e_data?.value || todayISO(),
+        tecnico: (e_tecnico?.value || "").trim() || null,
+        lote: (e_lote?.value || "").trim() || null,
+        massa,
+        agregado,
+        pb: Number(pb.toFixed(3)),
+        status: ok ? "CONFORME" : "NAO_CONFORME",
+        pbMin: Number(pbMin.toFixed(3)),
+        pbMax: Number(pbMax.toFixed(3)),
+        createdAt: serverTimestamp()
+      });
+      alert("✅ Ensaio salvo!");
+    } catch (e) {
+      console.error(e);
+      alert("❌ Erro ao salvar (veja Console).");
     }
   });
-  const status = !anyChecked ? "SEM_LIMITES" : (allOk ? "CONFORME" : "NAO_CONFORME");
-
-  try {
-    await addDoc(ensaiosCol, {
-      projectId: ACTIVE_PROJECT_ID,
-      projectName: ACTIVE_PROJECT?.nome || null,
-      data: dataISO,
-      tecnico: tecnico || null,
-      lote: lote || null,
-      obs: obs || null,
-      Mmix,
-      kf,
-      totalAgg,
-      Pb: Number(Pb.toFixed(3)),
-      retidos: ret,
-      passantes: passMap,
-      status,
-      createdAt: serverTimestamp()
-    });
-    showMsg(msgEnsaio, "Ensaio salvo no Firebase!", true);
-  } catch (e) {
-    console.error(e);
-    showMsg(msgEnsaio, "Falha ao salvar. Abra o Console (F12).", false);
-  }
 }
-
-if (btnSalvarEnsaio) btnSalvarEnsaio.addEventListener("click", salvarEnsaio);
 
 function refreshEnsaiosList() {
   if (!listaEnsaios) return;
-  listaEnsaios.innerHTML = `<div class="muted">Carregando…</div>`;
-
   if (!ACTIVE_PROJECT_ID) {
     listaEnsaios.innerHTML = `<div class="muted">Sem projeto ativo.</div>`;
     return;
@@ -485,165 +363,42 @@ function refreshEnsaiosList() {
 
   const qEns = query(
     ensaiosCol,
-    where("projectId","==", ACTIVE_PROJECT_ID),
-    orderBy("createdAt","desc"),
-    limit(10)
+    where("projectId", "==", ACTIVE_PROJECT_ID),
+    orderBy("createdAt", "desc"),
+    limit(15)
   );
 
-  onSnapshot(qEns, (snap)=>{
+  onSnapshot(qEns, (snap) => {
     if (snap.empty) {
       listaEnsaios.innerHTML = `<div class="muted">Nenhum ensaio salvo ainda.</div>`;
       return;
     }
-    const wrap = document.createElement("div");
-    wrap.className = "list";
-    snap.forEach(d=>{
+    listaEnsaios.innerHTML = "";
+    snap.forEach(d => {
       const a = d.data();
       const el = document.createElement("div");
       el.className = "item";
       el.innerHTML = `
         <div>
           <b>${escapeHtml(a.data || "")} • ${escapeHtml(a.lote || "—")}</b>
-          <div class="meta">Téc.: ${escapeHtml(a.tecnico || "—")} • Pb: ${a.Pb ?? "—"}% • Mmix: ${a.Mmix ?? "—"}g</div>
-          <div class="meta">Status: ${escapeHtml(a.status || "—")}</div>
+          <div class="meta">Téc.: ${escapeHtml(a.tecnico || "—")} • Pb: ${a.pb ?? "—"}% • Massa: ${a.massa ?? "—"}g • Agreg.: ${a.agregado ?? "—"}g</div>
+          <div class="meta">Status: ${escapeHtml(a.status || "—")} • Limites: ${a.pbMin ?? "—"} a ${a.pbMax ?? "—"}</div>
         </div>
       `;
-      wrap.appendChild(el);
+      listaEnsaios.appendChild(el);
     });
-    listaEnsaios.innerHTML = "";
-    listaEnsaios.appendChild(wrap);
-  }, (err)=>{
+  }, (err) => {
     console.error(err);
     listaEnsaios.innerHTML = `<div class="muted">Erro ao carregar ensaios.</div>`;
   });
 }
 
-/* ---------- init ---------- */
+/* ====== init ====== */
 setConn("Online (Firestore)", true);
-if (e_data && !e_data.value) e_data.value = todayISO();
-loadActiveProjectOnce().then(refreshActiveProject).catch(()=>{});
-// ---------- ENSAIO REAL ----------// ---------- ENSconst btnSalvar = document.querySelector("#view-ensaios button");
-
-if (btnSalvar) {
-  btnSalvar.addEventListener("click", async () => {
-
-    const data = document.getElementById("data")?.value;
-    const tecnico = document.getElementById("tecnico")?.value;
-    const lote = document.getElementById("lote")?.value;
-    const massa = document.getElementById("massa")?.value;
-
-    try {
-      await addDoc(collection(db, "ensaios"), {
-        data: data || "",
-        tecnico: tecnico || "",
-        lote: lote || "",
-        massa: massa || "",
-        createdAt: new Date().toISOString()
-      });
-
-      alert("✅ Ensaio salvo com sucesso!");
-
-    } catch (e) {
-      console.error(e);
-      alert("❌ Erro ao salvar");
-    }
-
-  });
-}
-// ---------- BOTÃO ENSAIO ----------
-const botao = document.querySelector("#view-ensaios button");
-
-if (botao) {
-  botao.addEventListener("click", async () => {
-
-    const massa = document.querySelector("#view-ensaios input")?.value;
-
-    try {
-      await addDoc(collection(db, "ensaios"), {
-        massa: massa || "",
-        data: new Date().toISOString()
-      });
-
-      alert("✅ Ensaio salvo!");
-
-    } catch (e) {
-      console.error(e);
-      alert("❌ Erro ao salvar");
-    }
-
-  });
-}
-// ---------- MOSTRAR ENSAIOS ----------
-const lista = document.createElement("div");
-lista.style.marginTop = "20px";
-
-const container = document.querySelector("#view-ensaios");
-if (container) {
-  container.appendChild(lista);
-}
-
-onSnapshot(collection(db, "ensaios"), (snapshot) => {
-  lista.innerHTML = "<h3>Ensaios salvos:</h3>";
-
-  snapshot.forEach((doc) => {
-    const d = doc.data();
-
-    const item = document.createElement("div");
-    item.style.border = "1px solid #ccc";
-    item.style.padding = "10px";
-    item.style.marginTop = "5px";
-
-    item.innerHTML = `
-      <b>Massa:</b> ${d.massa || "-"} g<br>
-      <b>Data:</b> ${d.data || "-"}
-    `;
-
-    lista.appendChild(item);
-  });
-});
-``
-// ---------- CALCULAR PB ----------
-const campoMassa = document.getElementById("massa");
-const campoAgregado = document.getElementById("agregado");
-
-// criar campo visual para mostrar Pb
-const pbDiv = document.createElement("div");
-pbDiv.style.marginTop = "10px";
-pbDiv.innerHTML = "<b>Pb (%): </b> —";
-
-const ensaioCard = document.querySelector("#view-ensaios .card");
-if (ensaioCard) {
-  ensaioCard.appendChild(pbDiv);
-}
-
-function calcularPb() {
-  const massa = parseFloat(campoMassa?.value || 0);
-  const agregado = parseFloat(campoAgregado?.value || 0);
-
-  if (massa > 0 && agregado >= 0) {
-    const pb = ((massa - agregado) / massa) * 100;
-
-    let status = "";
-
-    // valor de referência (depois vamos puxar do projeto)
-    const pbMin = 4.5;
-    const pbMax = 6.5;
-
-    if (pb >= pbMin && pb <= pbMax) {
-      status = "✅ CONFORME";
-    } else {
-      status = "❌ NÃO CONFORME";
-    }
-
-    pbDiv.innerHTML =
-      "<b>Pb (%): </b> " + pb.toFixed(2) +
-      "<br><b>Status: </b> " + status;
-
-  } else {
-    pbDiv.innerHTML = "<b>Pb (%): </b> —";
-  }
-}
-
-// recalcular ao digitar
-if (campoMassa) campoMassa.addEventListener("input", calcularPb);
-if (campoAgregado) campoAgregado.addEventListener("input", calcularPb);
+setActiveText("Projeto ativo: (carregando)");
+getDoc(activeRef).then(s => {
+  ACTIVE_PROJECT_ID = s.exists() ? (s.data().projectId || null) : null;
+  refreshActiveProject();
+}).catch(()=>{});
+applyProjectToPbRule();
+refreshEnsaiosList();
