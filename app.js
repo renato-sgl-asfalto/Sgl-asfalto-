@@ -500,3 +500,21 @@ function refreshEnsaiosList() {
 setConn("Online (Firestore)", true);
 if (e_data && !e_data.value) e_data.value = todayISO();
 loadActiveProjectOnce().then(refreshActiveProject).catch(()=>{});
+// ---------- TESTE ENSAIO SIMPLES ----------
+const btnTeste = document.querySelector("#view-ensaios button");
+
+if (btnTeste) {
+  btnTeste.addEventListener("click", async () => {
+    try {
+      await addDoc(collection(db, "teste_ensaios"), {
+        data: new Date().toISOString(),
+        info: "teste simples",
+      });
+
+      alert("Ensaio salvo com sucesso!");
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar");
+    }
+  });
+}
