@@ -571,3 +571,32 @@ if (botao) {
 
   });
 }
+// ---------- MOSTRAR ENSAIOS ----------
+const lista = document.createElement("div");
+lista.style.marginTop = "20px";
+
+const container = document.querySelector("#view-ensaios");
+if (container) {
+  container.appendChild(lista);
+}
+
+onSnapshot(collection(db, "ensaios"), (snapshot) => {
+  lista.innerHTML = "<h3>Ensaios salvos:</h3>";
+
+  snapshot.forEach((doc) => {
+    const d = doc.data();
+
+    const item = document.createElement("div");
+    item.style.border = "1px solid #ccc";
+    item.style.padding = "10px";
+    item.style.marginTop = "5px";
+
+    item.innerHTML = `
+      <b>Massa:</b> ${d.massa || "-"} g<br>
+      <b>Data:</b> ${d.data || "-"}
+    `;
+
+    lista.appendChild(item);
+  });
+});
+``
