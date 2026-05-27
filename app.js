@@ -113,7 +113,27 @@ const p_cliente = document.getElementById("p_cliente");
 const p_pb = document.getElementById("p_pb");
 const p_mistura = document.getElementById("p_mistura");
 const p_cap = document.getElementById("p_cap");
-const btnSalvarProjeto = document.getElementById("btnSalvarProjeto");
+// ---------- BOTÃO ENSAIO (CORRETO) ----------
+const btnSalvar = document.querySelector("#view-ensaios button");
+
+if (btnSalvar) {
+  btnSalvar.addEventListener("click", async () => {
+    const massa = document.querySelector("#view-ensaios input")?.value || "";
+
+    try {
+      await addDoc(collection(db, "ensaios"), {
+        massa,
+        data: new Date().toISOString()
+      });
+
+      alert("✅ Ensaio salvo!");
+    } catch (e) {
+      console.error(e);
+      alert("❌ Erro ao salvar (veja o Console)");
+    }
+  });
+}
+``
 const msgProjeto = document.getElementById("msgProjeto");
 const listaProjetos = document.getElementById("listaProjetos");
 
