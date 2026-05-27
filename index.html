@@ -1,7 +1,104 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8sieveBody"></tbody>  <meta charset="utf-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SGLAA – Laboratório de Asfalto</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">SGLAA</div>
+      <div class="sub">Laboratório de Asfalto • Online</div>
+    </div>
+    <div class="right">
+      <div class="pill" id="connPill">Conectando…</div>
+      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="painel">Painel</button>
+    <button class="tab" data-tab="projetos">Projetos</button>
+    <button class="tab" data-tab="ensaios">Ensaios</button>
+    <button class="tab" data-tab="relatorios">Relatórios</button>
+  </nav>
+
+  <main class="main">
+    <!-- PAINEL -->
+    <section class="view" id="view-painel">
+      <div class="card">
+        <h2>Painel</h2>
+        <p class="muted">Status do sistema e contagem de projetos.</p>
+
+        <div class="grid2">
+          <div class="kpi">
+            <div class="kpiTitle">Status Firebase</div>
+            <div class="kpiValue" id="kpiFirebase">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Projetos cadastrados</div>
+            <div class="kpiValue" id="kpiProjetos">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJETOS -->
+    <section class="view hidden" id="view-projetos">
+      <div class="card">
+        <h2>Projetos (Dosagens)</h2>
+        <p class="muted">Cadastre Pb do projeto e tolerância (±). Cadastre também a faixa granulométrica (min/max por peneira).</p>
+
+        <div class="grid2">
+          <div>
+            <label>Nome do Projeto</label>
+            <input id="p_nome" placeholder="Ex: ECO Asfalto – FX 12,5" />
+          </div>
+          <div>
+            <label>Código (opcional)</label>
+            <input id="p_codigo" placeholder="Ex: FX12,5-PU-8" />
+          </div>
+
+          <div>
+            <label>Cliente/Obra (opcional)</label>
+            <input id="p_cliente" placeholder="Ex: EPR Sul de Minas" />
+          </div>
+          <div>
+            <label>Teor CAP projeto (%)</label>
+            <input id="p_pb" placeholder="Ex: 5,20" />
+          </div>
+
+          <div>
+            <label>Tolerância do Pb (± %)</label>
+            <input id="p_pbtol" placeholder="Ex: 0,30" />
+          </div>
+          <div>
+            <label>Tipo de CAP (opcional)</label>
+            <input id="p_cap" placeholder="Ex: CAP 50/70" />
+          </div>
+
+          <div>
+            <label>Tipo de mistura (opcional)</label>
+            <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3>Faixa granulométrica do PROJETO (min e max % passante)</h3>
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Peneira</th>
+                <th>Mín (%)</th>
+                <th>Máx (%)</th>
+              </tr>
+            </thead>
+            <tbody id="sieveBody"></tbody>
           </table>
         </div>
 
@@ -73,7 +170,7 @@
       </div>
     </section>
 
-    <!-- RELATÓRIOS (placeholder) -->
+    <!-- RELATÓRIOS -->
     <section class="view hidden" id="view-relatorios">
       <div class="card">
         <h2>Relatórios</h2>
@@ -85,102 +182,3 @@
   <script type="module" src="./app.js"></script>
 </body>
 </html>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SGLAA – Laboratório de Asfalto</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-
-<body>
-  <header class="top">
-    <div class="brand">
-      <div class="logo">SGLAA</div>
-      <div class="sub">Laboratório de Asfalto • Online</div>
-    </div>
-    <div class="right">
-      <div class="pill" id="connPill">Conectando…</div>
-      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
-    </div>
-  </header>
-
-  <nav class="tabs">
-    <button class="tab active" data-tab="painel">Painel</button>
-    <button class="tab" data-tab="projetos">Projetos</button>
-    <button class="tab" data-tab="ensaios">Ensaios</button>
-    <button class="tab" data-tab="relatorios">Relatórios</button>
-  </nav>
-
-  <main class="main">
-    <!-- PAINEL -->
-    <section class="view" id="view-painel">
-      <div class="card">
-        <h2>Painel</h2>
-        <p class="muted">Status do sistema e contagem de projetos.</p>
-
-        <div class="grid2">
-          <div class="kpi">
-            <div class="kpiTitle">Status Firebase</div>
-            <div class="kpiValue" id="kpiFirebase">—</div>
-          </div>
-          <div class="kpi">
-            <div class="kpiTitle">Projetos cadastrados</div>
-            <div class="kpiValue" id="kpiProjetos">—</div>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-        <div class="muted">Link: <a class="link" href="https://sgl-asfalto.vercel.app/" target="_blank" rel="noreferrer">Abrir o app</a></div>
-      </div>
-    </section>
-
-    <!-- PROJETOS -->
-    <section class="view hidden" id="view-projetos">
-      <div class="card">
-        <h2>Projetos (Dosagens)</h2>
-        <p class="muted">Cadastre Pb do projeto e tolerância (±). Cadastre também a faixa granulométrica (min/max por peneira).</p>
-
-        <div class="grid2">
-          <div>
-            <label>Nome do Projeto</label>
-            <input id="p_nome" placeholder="Ex: ECO Asfalto – FX 12,5" />
-          </div>
-          <div>
-            <label>Código (opcional)</label>
-            <input id="p_codigo" placeholder="Ex: FX12,5-PU-8" />
-          </div>
-
-          <div>
-            <label>Cliente/Obra (opcional)</label>
-            <input id="p_cliente" placeholder="Ex: EPR Sul de Minas" />
-          </div>
-          <div>
-            <label>Teor CAP projeto (%)</label>
-            <input id="p_pb" placeholder="Ex: 5,20" />
-          </div>
-
-          <div>
-            <label>Tolerância do Pb (± %)</label>
-            <input id="p_pbtol" placeholder="Ex: 0,30" />
-          </div>
-          <div>
-            <label>Tipo de CAP (opcional)</label>
-            <input id="p_cap" placeholder="Ex: CAP 50/70" />
-          </div>
-
-          <div>
-            <label>Tipo de mistura (opcional)</label>
-            <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <h3>Faixa granulométrica do PROJETO (min e max % passante)</h3>
-        <div class="tableWrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th>Peneira</th>
-                <th>Mín (%)</th>
-                <th>Máx (%)</th>
-              </tr>
-            </thead>
