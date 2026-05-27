@@ -2,19 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SGLAA – Laboratório de Asfalto</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-
-<body>
-  <header class="top">
-    <div class="brand">
-      <div class="logo">SGLAA</div>
-      <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto • Online</div>
-    </div>
-    <div class="right">
-      <div class="pill" id="connPill">Conectando…</div>
+  <meta name="viewport"      <div class="pill" id="connPill">Conectando…</div>  <meta name="viewport" content="width=device-width, initial-scale=1" />
       <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
     </div>
   </header>
@@ -23,14 +11,17 @@
     <button class="tab active" data-tab="painel">Painel</button>
     <button class="tab" data-tab="projetos">Projetos</button>
     <button class="tab" data-tab="ensaios">Ensaios</button>
+    <button class="tab" data-tab="estatistico">Controle Estatístico</button>
+    <button class="tab" data-tab="relatorios">Relatórios</button>
   </nav>
 
   <main class="main">
+
     <!-- PAINEL -->
     <section class="view" id="view-painel">
       <div class="card">
         <h2>Painel</h2>
-        <p class="muted">Resumo do sistema (projeto ativo).</p>
+        <p class="muted">Resumo do projeto ativo e indicadores.</p>
 
         <div class="grid2">
           <div class="kpi">
@@ -42,7 +33,7 @@
             <div class="kpiValue" id="kpiProjetos">—</div>
           </div>
           <div class="kpi">
-            <div class="kpiTitle">Ensaios no projeto ativo</div>
+            <div class="kpiTitle">Ensaios (proj. ativo)</div>
             <div class="kpiValue" id="kpiEnsaios">—</div>
           </div>
           <div class="kpi">
@@ -50,6 +41,11 @@
             <div class="kpiValue" id="kpiConformes">—</div>
           </div>
         </div>
+
+        <div class="hr"></div>
+        <p class="muted">
+          Dica: no celular use “Adicionar à tela inicial”.
+        </p>
       </div>
     </section>
 
@@ -58,7 +54,7 @@
       <div class="card">
         <h2>Projetos (Dosagens)</h2>
         <p class="muted">
-          Cadastre Pb do projeto ± tolerância e a faixa granulométrica (mín/máx por peneira). Depois clique em <b>Ativar</b>.
+          Cadastre Pb do projeto ± tolerância e a faixa granulométrica (mín/máx). Depois clique em <b>Ativar</b>.
         </p>
 
         <div class="grid2">
@@ -100,67 +96,112 @@
     <!-- ENSAIOS -->
     <section class="view hidden" id="view-ensaios">
       <div class="card">
-        <h2>Ensaio — Extração + Granulometria (CORRIGIDO)</h2>
-        <p class="muted">
-          Fluxo correto: Pb usa massa COM betume (antes) e massa SEM betume (após extração).
-          Granulometria calcula %passante sobre a massa SEM betume. 【1-21ba13】【2-9d5854】
-        </p>
+        <h2>Ensaios</h2>
 
-        <div class="grid2">
-          <div><label>Data</label><input type="date" id="e_data" /></div>
-          <div><label>Técnico</label><input id="e_tecnico" placeholder="Nome do técnico" /></div>
-          <div><label>Lote / Nº Amostra</label><input id="e_lote" placeholder="Ex: Lote 01 / Amostra 03" /></div>
-          <div><label>Observação</label><input id="e_obs" placeholder="Opcional" /></div>
+        <div class="subtabs">
+          <button class="subtab active" data-sub="extrgranu">Extração + Granu</button>
+          <button class="subtab" data-sub="rice">Rice (Gmm)</button>
+          <button class="subtab" data-sub="marshall">Marshall</button>
+          <button class="subtab" data-sub="rt">RT</button>
+          <button class="subtab" data-sub="se">Equiv. Areia</button>
         </div>
 
         <div class="hr"></div>
 
-        <div class="grid2">
-          <div><label>Massa COM betume (antes) (g)</label><input id="e_mmix" placeholder="Ex: 1200" /></div>
-          <div><label>Massa SEM betume (após extração) (g)</label><input id="e_magg" placeholder="Ex: 1130" /></div>
-          <div><label>kf (correção) (opcional)</label><input id="e_kf" placeholder="Ex: 0,00" /></div>
+        <!-- EXTRAÇÃO + GRANU (CORRIGIDO) -->
+        <div class="subview" id="sub-extrgranu">
+          <p class="muted">
+            Correto: Pb usa <b>Mcom</b> e <b>Msem</b>. Granulometria calcula % passante sobre <b>Msem</b>. 【1-938ae9】【2-5563a9】
+          </p>
 
-          <div class="kpi">
-            <div class="kpiTitle">Pb (%)</div>
-            <div class="kpiValue" id="e_pb">—</div>
-            <div class="muted" id="e_pb_lim">Limites: —</div>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="e_data" /></div>
+            <div><label>Técnico</label><input id="e_tecnico" placeholder="Nome do técnico" /></div>
+            <div><label>Lote / Nº Amostra</label><input id="e_lote" placeholder="Ex: Lote 01 / Amostra 03" /></div>
+            <div><label>Observação</label><input id="e_obs" placeholder="Opcional" /></div>
           </div>
 
-          <div class="kpi">
-            <div class="kpiTitle">Fechamento Granu</div>
-            <div class="kpiValue" id="e_fech">—</div>
-            <div class="muted">((Msem − Σretidos)/Msem)×100</div>
+          <div class="hr"></div>
+
+          <div class="grid2">
+            <div><label>Massa COM betume (antes) (g)</label><input id="e_mmix" placeholder="Ex: 1200" /></div>
+            <div><label>Massa SEM betume (após extração) (g)</label><input id="e_magg" placeholder="Ex: 1130" /></div>
+            <div><label>kf (correção) (opcional)</label><input id="e_kf" placeholder="Ex: 0,00" /></div>
+
+            <div class="kpi">
+              <div class="kpiTitle">Pb (%)</div>
+              <div class="kpiValue" id="e_pb">—</div>
+              <div class="muted" id="e_pb_lim">Limites: —</div>
+            </div>
+
+            <div class="kpi">
+              <div class="kpiTitle">Fechamento Granu</div>
+              <div class="kpiValue" id="e_fech">—</div>
+              <div class="muted">((Msem − Σretidos)/Msem)×100</div>
+            </div>
+
+            <div class="kpi">
+              <div class="kpiTitle">Status geral</div>
+              <div class="kpiValue"><span class="badge" id="e_status">—</span></div>
+              <div class="muted" id="e_status_det">—</div>
+            </div>
           </div>
 
-          <div class="kpi">
-            <div class="kpiTitle">Status geral</div>
-            <div class="kpiValue"><span class="badge" id="e_status">—</span></div>
-            <div class="muted" id="e_status_det">—</div>
+          <div class="hr"></div>
+
+          <h3>Granulometria (retidos em gramas)</h3>
+          <div class="tableWrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Peneira</th><th>Retido (g)</th><th>% Passante</th><th>Mín</th><th>Máx</th><th>OK?</th>
+                </tr>
+              </thead>
+              <tbody id="ensSieveBody"></tbody>
+            </table>
           </div>
+
+          <div class="row">
+            <button id="btnSalvarEnsaio">Salvar Ensaio</button>
+            <div class="msg" id="msgEnsaio"></div>
+          </div>
+
+          <div class="hr"></div>
+          <h3>Últimos ensaios (Projeto Ativo)</h3>
+          <div class="list" id="listaEnsaios"></div>
         </div>
 
-        <div class="hr"></div>
-
-        <h3>Granulometria (retidos em gramas)</h3>
-        <div class="tableWrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th>Peneira</th><th>Retido (g)</th><th>% Passante</th><th>Mín</th><th>Máx</th><th>OK?</th>
-              </tr>
-            </thead>
-            <tbody id="ensSieveBody"></tbody>
-          </table>
+        <!-- placeholders (já deixam o app “completo” visualmente; JS ignora se não usar agora) -->
+        <div class="subview hidden" id="sub-rice">
+          <p class="muted">Rice (Gmm) — será ativado no próximo ajuste fino (já está preparado no app.js).</p>
+        </div>
+        <div class="subview hidden" id="sub-marshall">
+          <p class="muted">Marshall — preparado no app.js (próximo ajuste fino).</p>
+        </div>
+        <div class="subview hidden" id="sub-rt">
+          <p class="muted">RT — preparado no app.js (próximo ajuste fino).</p>
+        </div>
+        <div class="subview hidden" id="sub-se">
+          <p class="muted">Equivalente de Areia — preparado no app.js (próximo ajuste fino).</p>
         </div>
 
-        <div class="row">
-          <button id="btnSalvarEnsaio">Salvar Ensaio</button>
-          <div class="msg" id="msgEnsaio"></div>
-        </div>
+      </div>
+    </section>
 
-        <div class="hr"></div>
-        <h3>Últimos ensaios (Projeto Ativo)</h3>
-        <div class="list" id="listaEnsaios"></div>
+    <!-- CONTROLE ESTATÍSTICO -->
+    <section class="view hidden" id="view-estatistico">
+      <div class="card">
+        <h2>Controle Estatístico</h2>
+        <p class="muted">Resumo por período (média / desvio / k).</p>
+        <div class="muted">Este módulo está preparado no app.js; ativamos após validar Extração+Granu.</div>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section class="view hidden" id="view-relatorios">
+      <div class="card">
+        <h2>Relatórios</h2>
+        <p class="muted">Imprimir / salvar PDF (será ativado após validar Extração+Granu).</p>
       </div>
     </section>
 
@@ -169,3 +210,14 @@
   <script type="module" src="./app.js"></script>
 </body>
 </html>
+  <title>SGLAA – Laboratório de Asfalto</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">SGLAA</div>
+      <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto • Online</div>
+    </div>
+    <div class="right">
