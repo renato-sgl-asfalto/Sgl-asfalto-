@@ -1,26 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport"      <div class="pill" id="connPill">Conectando…</div>  <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
-    </div>
-  </header>
-
-  <nav class="tabs">
-    <button class="tab active" data-tab="painel">Painel</button>
-    <button class="tab" data-tab="projetos">Projetos</button>
-    <button class="tab" data-tab="ensaios">Ensaios</button>
-    <button class="tab" data-tab="estatistico">Controle Estatístico</button>
-    <button class="tab" data-tab="relatorios">Relatórios</button>
-  </nav>
-
-  <main class="main">
-
-    <!-- PAINEL -->
-    <section class="view" id="view-painel">
-      <div class="card">
-        <h2>Painel</h2>
+  <meta charset=" <h2>Painel</h2>  <meta charset="utf-8" />
         <p class="muted">Resumo do projeto ativo e indicadores.</p>
 
         <div class="grid2">
@@ -43,9 +24,7 @@
         </div>
 
         <div class="hr"></div>
-        <p class="muted">
-          Dica: no celular use “Adicionar à tela inicial”.
-        </p>
+        <p class="muted">Dica: no celular use “Adicionar à tela inicial”.</p>
       </div>
     </section>
 
@@ -54,7 +33,7 @@
       <div class="card">
         <h2>Projetos (Dosagens)</h2>
         <p class="muted">
-          Cadastre Pb do projeto ± tolerância e a faixa granulométrica (mín/máx). Depois clique em <b>Ativar</b>.
+          Cadastre Pb ± tolerância, densidade do CAP (para VAM/RBV) e faixa granulométrica (mín/máx). Depois clique em <b>Ativar</b>.
         </p>
 
         <div class="grid2">
@@ -63,9 +42,28 @@
           <div><label>Cliente/Obra (opcional)</label><input id="p_cliente" placeholder="Ex: EPR Sul de Minas" /></div>
           <div><label>Tipo de mistura (opcional)</label><input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" /></div>
           <div><label>Tipo de CAP (opcional)</label><input id="p_cap" placeholder="Ex: CAP 50/70" /></div>
+
           <div><label>Pb do projeto (%)</label><input id="p_pb" placeholder="Ex: 5,20" /></div>
           <div><label>Tolerância Pb (± %)</label><input id="p_pbtol" placeholder="Ex: 0,30" /></div>
-          <div class="muted">Se deixar vazio, usa 0,30.</div>
+
+          <div><label>Densidade do CAP (g/cm³)</label><input id="p_gb" placeholder="Ex: 1,005" /></div>
+          <div class="muted">Se deixar vazio: 1,005.</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3>Limites Marshall / Volumétricos / RT / SE (opcional)</h3>
+        <div class="grid2">
+          <div><label>Vv mín (%)</label><input id="p_vv_min" placeholder="Ex: 3,0" /></div>
+          <div><label>Vv máx (%)</label><input id="p_vv_max" placeholder="Ex: 5,0" /></div>
+          <div><label>VAM mín (%)</label><input id="p_vam_min" placeholder="Ex: 13,0" /></div>
+          <div><label>RBV mín (%)</label><input id="p_rbv_min" placeholder="Ex: 65" /></div>
+          <div><label>RBV máx (%)</label><input id="p_rbv_max" placeholder="Ex: 75" /></div>
+          <div><label>Estabilidade mín</label><input id="p_estab_min" placeholder="Ex: 500" /></div>
+          <div><label>Fluência mín</label><input id="p_flow_min" placeholder="Ex: 2" /></div>
+          <div><label>Fluência máx</label><input id="p_flow_max" placeholder="Ex: 4" /></div>
+          <div><label>RT mín (MPa)</label><input id="p_rt_min" placeholder="Ex: 0,65" /></div>
+          <div><label>SE mín (%)</label><input id="p_se_min" placeholder="Ex: 55" /></div>
         </div>
 
         <div class="hr"></div>
@@ -108,25 +106,25 @@
 
         <div class="hr"></div>
 
-        <!-- EXTRAÇÃO + GRANU (CORRIGIDO) -->
+        <!-- EXTRAÇÃO + GRANU -->
         <div class="subview" id="sub-extrgranu">
           <p class="muted">
-            Correto: Pb usa <b>Mcom</b> e <b>Msem</b>. Granulometria calcula % passante sobre <b>Msem</b>. 【1-938ae9】【2-5563a9】
+            Pb: Mcom e Msem. Granulometria em cima de Msem. Como você lava na #200 e não pesa fundo, o “diferença” é o % passante #200 (lavado). 【2-9f2f16】【3-c4c41d】
           </p>
 
           <div class="grid2">
             <div><label>Data</label><input type="date" id="e_data" /></div>
-            <div><label>Técnico</label><input id="e_tecnico" placeholder="Nome do técnico" /></div>
-            <div><label>Lote / Nº Amostra</label><input id="e_lote" placeholder="Ex: Lote 01 / Amostra 03" /></div>
-            <div><label>Observação</label><input id="e_obs" placeholder="Opcional" /></div>
+            <div><label>Técnico</label><input id="e_tecnico" /></div>
+            <div><label>Lote / Nº Amostra</label><input id="e_lote" /></div>
+            <div><label>Observação</label><input id="e_obs" /></div>
           </div>
 
           <div class="hr"></div>
 
           <div class="grid2">
-            <div><label>Massa COM betume (antes) (g)</label><input id="e_mmix" placeholder="Ex: 1200" /></div>
-            <div><label>Massa SEM betume (após extração) (g)</label><input id="e_magg" placeholder="Ex: 1130" /></div>
-            <div><label>kf (correção) (opcional)</label><input id="e_kf" placeholder="Ex: 0,00" /></div>
+            <div><label>Massa COM betume (antes) (g)</label><input id="e_mmix" /></div>
+            <div><label>Massa SEM betume (após extração) (g)</label><input id="e_magg" /></div>
+            <div><label>kf (correção) (opcional)</label><input id="e_kf" /></div>
 
             <div class="kpi">
               <div class="kpiTitle">Pb (%)</div>
@@ -135,9 +133,9 @@
             </div>
 
             <div class="kpi">
-              <div class="kpiTitle">Fechamento Granu</div>
-              <div class="kpiValue" id="e_fech">—</div>
-              <div class="muted">((Msem − Σretidos)/Msem)×100</div>
+              <div class="kpiTitle">% Passante #200 (lavado)</div>
+              <div class="kpiValue" id="e_p200">—</div>
+              <div class="muted">100 − (Σretidos/#200 ÷ Msem)×100</div>
             </div>
 
             <div class="kpi">
@@ -171,18 +169,102 @@
           <div class="list" id="listaEnsaios"></div>
         </div>
 
-        <!-- placeholders (já deixam o app “completo” visualmente; JS ignora se não usar agora) -->
+        <!-- RICE -->
         <div class="subview hidden" id="sub-rice">
-          <p class="muted">Rice (Gmm) — será ativado no próximo ajuste fino (já está preparado no app.js).</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="r_data" /></div>
+            <div><label>Técnico</label><input id="r_tecnico" /></div>
+            <div><label>Lote</label><input id="r_lote" /></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid2">
+            <div><label>A (g)</label><input id="r_A" /></div>
+            <div><label>B (g)</label><input id="r_B" /></div>
+            <div><label>C (g)</label><input id="r_C" /></div>
+            <div class="kpi"><div class="kpiTitle">Gmm</div><div class="kpiValue" id="r_gmm">—</div></div>
+          </div>
+          <div class="row"><button id="btnSalvarRice">Salvar Rice</button><div class="msg" id="msgRice"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos Rice</h3>
+          <div class="list" id="listaRice"></div>
         </div>
+
+        <!-- MARSHALL -->
         <div class="subview hidden" id="sub-marshall">
-          <p class="muted">Marshall — preparado no app.js (próximo ajuste fino).</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="m_data" /></div>
+            <div><label>Técnico</label><input id="m_tecnico" /></div>
+            <div><label>Lote</label><input id="m_lote" /></div>
+            <div><label>Gmm manual (opcional)</label><input id="m_gmm_manual" /></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="grid2">
+            <div><label>A (massa no ar) (g)</label><input id="m_A" /></div>
+            <div><label>B (SSD) (g)</label><input id="m_B" /></div>
+            <div><label>C (submersa) (g)</label><input id="m_C" /></div>
+            <div><label>Estabilidade</label><input id="m_estab" /></div>
+            <div><label>Fluência</label><input id="m_flow" /></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="grid2">
+            <div class="kpi"><div class="kpiTitle">Gmb</div><div class="kpiValue" id="m_gmb">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Gmm</div><div class="kpiValue" id="m_gmm">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Vv (%)</div><div class="kpiValue" id="m_vv">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Vb (%)</div><div class="kpiValue" id="m_vb">—</div></div>
+            <div class="kpi"><div class="kpiTitle">VAM (%)</div><div class="kpiValue" id="m_vam">—</div></div>
+            <div class="kpi"><div class="kpiTitle">RBV (%)</div><div class="kpiValue" id="m_rbv">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Status</div><div class="kpiValue"><span class="badge" id="m_status">—</span></div><div class="muted" id="m_status_det">—</div></div>
+          </div>
+
+          <div class="row"><button id="btnSalvarMarshall">Salvar Marshall</button><div class="msg" id="msgMarshall"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos Marshall</h3>
+          <div class="list" id="listaMarshall"></div>
         </div>
+
+        <!-- RT -->
         <div class="subview hidden" id="sub-rt">
-          <p class="muted">RT — preparado no app.js (próximo ajuste fino).</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="t_data" /></div>
+            <div><label>Técnico</label><input id="t_tecnico" /></div>
+            <div><label>Lote</label><input id="t_lote" /></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid2">
+            <div><label>F (kgf)</label><input id="t_F" /></div>
+            <div><label>D (cm)</label><input id="t_D" /></div>
+            <div><label>H (cm)</label><input id="t_H" /></div>
+            <div class="kpi"><div class="kpiTitle">RT (MPa)</div><div class="kpiValue" id="t_rt">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Status</div><div class="kpiValue"><span class="badge" id="t_status">—</span></div><div class="muted" id="t_status_det">—</div></div>
+          </div>
+          <div class="row"><button id="btnSalvarRT">Salvar RT</button><div class="msg" id="msgRT"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos RT</h3>
+          <div class="list" id="listaRT"></div>
         </div>
+
+        <!-- SE -->
         <div class="subview hidden" id="sub-se">
-          <p class="muted">Equivalente de Areia — preparado no app.js (próximo ajuste fino).</p>
+          <div class="grid2">
+            <div><label>Data</label><input type="date" id="s_data" /></div>
+            <div><label>Técnico</label><input id="s_tecnico" /></div>
+            <div><label>Lote</label><input id="s_lote" /></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid2">
+            <div><label>H1</label><input id="s_H1" /></div>
+            <div><label>H2</label><input id="s_H2" /></div>
+            <div class="kpi"><div class="kpiTitle">SE (%)</div><div class="kpiValue" id="s_se">—</div></div>
+            <div class="kpi"><div class="kpiTitle">Status</div><div class="kpiValue"><span class="badge" id="s_status">—</span></div><div class="muted" id="s_status_det">—</div></div>
+          </div>
+          <div class="row"><button id="btnSalvarSE">Salvar SE</button><div class="msg" id="msgSE"></div></div>
+          <div class="hr"></div>
+          <h3>Últimos SE</h3>
+          <div class="list" id="listaSE"></div>
         </div>
 
       </div>
@@ -192,8 +274,25 @@
     <section class="view hidden" id="view-estatistico">
       <div class="card">
         <h2>Controle Estatístico</h2>
-        <p class="muted">Resumo por período (média / desvio / k).</p>
-        <div class="muted">Este módulo está preparado no app.js; ativamos após validar Extração+Granu.</div>
+        <p class="muted">Resumo por período (busca e filtra no navegador, sem exigir índice do Firestore).</p>
+        <div class="grid2">
+          <div><label>Data inicial</label><input type="date" id="c_ini" /></div>
+          <div><label>Data final</label><input type="date" id="c_fim" /></div>
+          <div class="kpi"><div class="kpiTitle">Itens</div><div class="kpiValue" id="c_total">—</div></div>
+          <div class="kpi"><div class="kpiTitle">% Conforme</div><div class="kpiValue" id="c_conf">—</div></div>
+        </div>
+        <div class="row"><button id="btnGerarCtrl">Gerar resumo</button><div class="msg" id="msgCtrl"></div></div>
+        <div class="hr"></div>
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead>
+              <tr><th>Data</th><th>Lote</th><th>Pb</th><th>P200</th><th>Gmm</th><th>Gmb</th><th>Vv</th><th>VAM</th><th>RBV</th><th>RT</th><th>SE</th><th>Status</th></tr>
+            </thead>
+            <tbody id="ctrlBody"></tbody>
+          </table>
+        </div>
+        <div class="hr"></div>
+        <div class="muted" id="ctrlStats">—</div>
       </div>
     </section>
 
@@ -201,7 +300,14 @@
     <section class="view hidden" id="view-relatorios">
       <div class="card">
         <h2>Relatórios</h2>
-        <p class="muted">Imprimir / salvar PDF (será ativado após validar Extração+Granu).</p>
+        <p class="muted">Gera relatório do período e abre a impressão (salvar PDF no navegador).</p>
+        <div class="grid2">
+          <div><label>Data inicial</label><input type="date" id="rel_ini" /></div>
+          <div><label>Data final</label><input type="date" id="rel_fim" /></div>
+          <div class="kpi"><div class="kpiTitle">Itens</div><div class="kpiValue" id="rel_total">—</div></div>
+          <div class="kpi"><div class="kpiTitle">% Conforme</div><div class="kpiValue" id="rel_conf">—</div></div>
+        </div>
+        <div class="row"><button id="btnRelatorio">Gerar relatório (Imprimir/PDF)</button><div class="msg" id="msgRelatorio"></div></div>
       </div>
     </section>
 
@@ -210,6 +316,7 @@
   <script type="module" src="./app.js"></script>
 </body>
 </html>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SGLAA – Laboratório de Asfalto</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -221,3 +328,21 @@
       <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto • Online</div>
     </div>
     <div class="right">
+      <div class="pill" id="connPill">Conectando…</div>
+      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="painel">Painel</button>
+    <button class="tab" data-tab="projetos">Projetos</button>
+    <button class="tab" data-tab="ensaios">Ensaios</button>
+    <button class="tab" data-tab="estatistico">Controle Estatístico</button>
+    <button class="tab" data-tab="relatorios">Relatórios</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- PAINEL -->
+    <section class="view" id="view-painel">
+      <div class="card">
