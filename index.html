@@ -13,6 +13,7 @@
       <div class="logo">SGLAA</div>
       <div class="sub">Laboratório de Asfalto • Online</div>
     </div>
+
     <div class="right">
       <div class="pill" id="connPill">Conectando…</div>
       <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
@@ -27,11 +28,14 @@
   </nav>
 
   <main class="main">
+
     <!-- PAINEL -->
     <section class="view" id="view-painel">
       <div class="card">
         <h2>Painel</h2>
-        <p class="muted">Status do sistema e contagem de projetos.</p>
+        <p class="muted">
+          Resumo do sistema. O “Projeto ativo” define os limites usados nos ensaios.
+        </p>
 
         <div class="grid2">
           <div class="kpi">
@@ -42,6 +46,19 @@
             <div class="kpiTitle">Projetos cadastrados</div>
             <div class="kpiValue" id="kpiProjetos">—</div>
           </div>
+          <div class="kpi">
+            <div class="kpiTitle">Ensaios salvos (projeto ativo)</div>
+            <div class="kpiValue" id="kpiEnsaios">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Conformidade (projeto ativo)</div>
+            <div class="kpiValue" id="kpiConform">—</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="muted">
+          Dica: no celular, adiciona o site na tela inicial (atalho). Assim vira “app”.
         </div>
       </div>
     </section>
@@ -50,7 +67,10 @@
     <section class="view hidden" id="view-projetos">
       <div class="card">
         <h2>Projetos (Dosagens)</h2>
-        <p class="muted">Cadastre Pb do projeto e tolerância (±). Cadastre também a faixa granulométrica (min/max por peneira).</p>
+        <p class="muted">
+          Cadastre Pb do projeto e tolerância (±) e a faixa granulométrica (mín/máx por peneira).
+          Depois clique em <b>Ativar</b>.
+        </p>
 
         <div class="grid2">
           <div>
@@ -67,7 +87,16 @@
             <input id="p_cliente" placeholder="Ex: EPR Sul de Minas" />
           </div>
           <div>
-            <label>Teor CAP projeto (%)</label>
+            <label>Tipo de mistura (opcional)</label>
+            <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
+          </div>
+
+          <div>
+            <label>Tipo de CAP (opcional)</label>
+            <input id="p_cap" placeholder="Ex: CAP 50/70" />
+          </div>
+          <div>
+            <label>Teor de CAP do projeto Pb (%)</label>
             <input id="p_pb" placeholder="Ex: 5,20" />
           </div>
 
@@ -75,20 +104,14 @@
             <label>Tolerância do Pb (± %)</label>
             <input id="p_pbtol" placeholder="Ex: 0,30" />
           </div>
-          <div>
-            <label>Tipo de CAP (opcional)</label>
-            <input id="p_cap" placeholder="Ex: CAP 50/70" />
-          </div>
-
-          <div>
-            <label>Tipo de mistura (opcional)</label>
-            <input id="p_mistura" placeholder="Ex: CBUQ / FX 12,5" />
+          <div class="muted">
+            Se deixar vazio, o sistema usa 0,30 como padrão.
           </div>
         </div>
 
         <div class="hr"></div>
 
-        <h3>Faixa granulométrica do PROJETO (min e max % passante)</h3>
+        <h3>Faixa granulométrica do PROJETO (mín/máx % passante)</h3>
         <div class="tableWrap">
           <table class="tbl">
             <thead>
@@ -118,21 +141,28 @@
     <!-- ENSAIOS -->
     <section class="view hidden" id="view-ensaios">
       <div class="card">
-        <h2>Ensaio — Extração (Pb)</h2>
-        <p class="muted">Usa automaticamente o Pb do Projeto Ativo (Pb projeto ± tolerância).</p>
+        <h2>Ensaio — Extração + Granulometria</h2>
+        <p class="muted">
+          Fluxo do laboratório: você informa massa da mistura, kf (se usar) e os retidos (g).
+          O sistema calcula Pb, % passante, compara com o Projeto Ativo e salva.
+        </p>
 
         <div class="grid2">
           <div>
             <label>Data</label>
-            <input type="date" id="data" />
+            <input type="date" id="e_data" />
           </div>
           <div>
             <label>Técnico</label>
-            <input id="tecnico" placeholder="Nome do técnico" />
+            <input id="e_tecnico" placeholder="Nome do técnico" />
           </div>
           <div>
             <label>Lote / Nº Amostra</label>
-            <input id="lote" placeholder="Ex: Lote 01 / Amostra 03" />
+            <input id="e_lote" placeholder="Ex: Lote 01 / Amostra 03" />
+          </div>
+          <div>
+            <label>Observação (opcional)</label>
+            <input id="e_obs" placeholder="Ex: chuva, material úmido..." />
           </div>
         </div>
 
@@ -141,31 +171,53 @@
         <div class="grid2">
           <div>
             <label>Massa da mistura (g)</label>
-            <input id="massa" placeholder="Ex: 1200" />
+            <input id="e_mmix" placeholder="Ex: 1200" />
           </div>
           <div>
-            <label>Massa de agregados (g)</label>
-            <input id="agregado" placeholder="Ex: 1130" />
+            <label>kf (correção) (opcional)</label>
+            <input id="e_kf" placeholder="Ex: 0,00" />
           </div>
 
           <div class="kpi">
             <div class="kpiTitle">Pb (%)</div>
-            <div class="kpiValue" id="pbOut">—</div>
+            <div class="kpiValue" id="e_pb">—</div>
+            <div class="muted" id="e_pb_lim">Limites: —</div>
           </div>
+
           <div class="kpi">
-            <div class="kpiTitle">Status</div>
-            <div class="kpiValue"><span class="badge" id="statusOut">—</span></div>
-            <div class="muted" id="limitesOut">Limites Pb: —</div>
+            <div class="kpiTitle">Status geral</div>
+            <div class="kpiValue"><span class="badge" id="e_status">—</span></div>
+            <div class="muted" id="e_status_det">—</div>
           </div>
         </div>
 
+        <div class="hr"></div>
+
+        <h3>Granulometria (retidos em gramas)</h3>
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Peneira</th>
+                <th>Retido (g)</th>
+                <th>% Passante (calc.)</th>
+                <th>Mín (proj.)</th>
+                <th>Máx (proj.)</th>
+                <th>OK?</th>
+              </tr>
+            </thead>
+            <tbody id="ensSieveBody"></tbody>
+          </table>
+        </div>
+
         <div class="row">
-          <button id="btnSalvar">Salvar Ensaio</button>
+          <button id="btnSalvarEnsaio">Salvar Ensaio</button>
+          <div class="msg" id="msgEnsaio"></div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Últimos ensaios (Projeto ativo)</h2>
+        <h2>Últimos ensaios (Projeto Ativo)</h2>
         <div class="list" id="listaEnsaios"></div>
       </div>
     </section>
@@ -173,10 +225,42 @@
     <!-- RELATÓRIOS -->
     <section class="view hidden" id="view-relatorios">
       <div class="card">
-        <h2>Relatórios</h2>
-        <p class="muted">Próximo passo: filtro por período + PDF.</p>
+        <h2>Relatório (Impressão / PDF)</h2>
+        <p class="muted">
+          Escolha um período e gere um relatório para imprimir ou salvar como PDF no navegador.
+        </p>
+
+        <div class="grid2">
+          <div>
+            <label>Data inicial</label>
+            <input type="date" id="r_ini" />
+          </div>
+          <div>
+            <label>Data final</label>
+            <input type="date" id="r_fim" />
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Itens no período</div>
+            <div class="kpiValue" id="r_total">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpiTitle">Conformidade</div>
+            <div class="kpiValue" id="r_conf">—</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="btnGerarRelatorio">Gerar relatório (Imprimir / Salvar PDF)</button>
+          <div class="msg" id="msgRel"></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="muted">
+          Dica: no Chrome/Edge, escolha “Salvar como PDF”.
+        </div>
       </div>
     </section>
+
   </main>
 
   <script type="module" src="./app.js"></script>
