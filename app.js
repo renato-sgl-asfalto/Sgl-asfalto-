@@ -37,7 +37,7 @@ function escapeHtml(s){
   }[c]));
 }
 
-/* ====== UI refs (pode ser null sem quebrar) ====== */
+/* ====== UI refs ====== */
 const connPill = document.getElementById("connPill");
 const activeProjPill = document.getElementById("activeProjPill");
 const kpiFirebase = document.getElementById("kpiFirebase");
@@ -53,6 +53,11 @@ function setConn(texto, ok = true) {
 }
 function setActiveText(txt) {
   if (activeProjPill) activeProjPill.textContent = txt;
+}
+function showMsg(el, texto, ok=true){
+  if (!el) return;
+  el.textContent = texto;
+  el.style.color = ok ? "#39d98a" : "#ff5c5c";
 }
 
 /* ====== Tabs ====== */
@@ -73,7 +78,7 @@ tabs.forEach(btn => {
   });
 });
 
-/* ====== Active project (meta/active) ====== */
+/* ====== Active project ====== */
 const activeRef = doc(db, "meta", "active");
 let ACTIVE_PROJECT_ID = null;
 let ACTIVE_PROJECT = null;
@@ -81,6 +86,7 @@ let ACTIVE_PROJECT = null;
 async function setActiveProject(projectId) {
   await setDoc(activeRef, { projectId, updatedAt: serverTimestamp() }, { merge: true });
 }
+
 async function refreshActiveProject() {
   if (!ACTIVE_PROJECT_ID) {
     ACTIVE_PROJECT = null;
@@ -150,11 +156,7 @@ function readSieveLimits(bodyEl) {
   });
   return limits;
 }
-function showMsg(el, texto, ok=true){
-  if (!el) return;
-  el.textContent = texto;
-  el.style.color = ok ? "#39d98a" : "#ff5c5c";
-}
+
 function clearProjectForm() {
   if (p_nome) p_nome.value = "";
   if (p_codigo) p_codigo.value = "";
@@ -264,7 +266,7 @@ if (listaProjetos) {
   });
 }
 
-/* ====== ENSAIOS (Extração simples: massa mistura + massa agregados) ====== */
+/* ====== ENSAIOS: Extração (Pb) ====== */
 const e_data = document.getElementById("data");
 const e_tecnico = document.getElementById("tecnico");
 const e_lote = document.getElementById("lote");
