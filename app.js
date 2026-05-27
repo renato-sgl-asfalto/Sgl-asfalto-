@@ -528,3 +528,26 @@ if (btnSalvar) {
 
   });
 }
+// ---------- BOTÃO ENSAIO ----------
+const botao = document.querySelector("#view-ensaios button");
+
+if (botao) {
+  botao.addEventListener("click", async () => {
+
+    const massa = document.querySelector("#view-ensaios input")?.value;
+
+    try {
+      await addDoc(collection(db, "ensaios"), {
+        massa: massa || "",
+        data: new Date().toISOString()
+      });
+
+      alert("✅ Ensaio salvo!");
+
+    } catch (e) {
+      console.error(e);
+      alert("❌ Erro ao salvar");
+    }
+
+  });
+}
