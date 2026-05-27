@@ -600,3 +600,32 @@ onSnapshot(collection(db, "ensaios"), (snapshot) => {
   });
 });
 ``
+// ---------- CALCULAR PB ----------
+const campoMassa = document.getElementById("massa");
+const campoAgregado = document.getElementById("agregado");
+
+// criar campo visual para mostrar Pb
+const pbDiv = document.createElement("div");
+pbDiv.style.marginTop = "10px";
+pbDiv.innerHTML = "<b>Pb (%): </b> —";
+
+const ensaioCard = document.querySelector("#view-ensaios .card");
+if (ensaioCard) {
+  ensaioCard.appendChild(pbDiv);
+}
+
+function calcularPb() {
+  const massa = parseFloat(campoMassa?.value || 0);
+  const agregado = parseFloat(campoAgregado?.value || 0);
+
+  if (massa > 0 && agregado >= 0) {
+    const pb = ((massa - agregado) / massa) * 100;
+    pbDiv.innerHTML = "<b>Pb (%): </b> " + pb.toFixed(2);
+  } else {
+    pbDiv.innerHTML = "<b>Pb (%): </b> —";
+  }
+}
+
+// recalcular ao digitar
+if (campoMassa) campoMassa.addEventListener("input", calcularPb);
+if (campoAgregado) campoAgregado.addEventListener("input", calcularPb);
