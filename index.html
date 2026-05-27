@@ -128,15 +128,27 @@
    <section class="view hidden" id="view-ensaios">
 
   <div class="card">
-    <h2>Ensaios</h2>
+  <h2>Ensaios - Extração</h2>
 
-    <p>Aqui vai entrar o módulo de ensaio.</p>
+  <label>Data</label>
+  <input type="date" id="data" />
 
-    <label>Massa da mistura</label>
-    <input placeholder="Digite aqui" />
+  <label>Técnico</label>
+  <input id="tecnico" placeholder="Nome do técnico" />
 
-    <button>Salvar Ensaio</button>
-  </div>
+  <label>Lote</label>
+  <input id="lote" placeholder="Ex: Lote 01" />
+
+  <label>Massa da mistura (g)</label>
+  <input id="massa" placeholder="Ex: 1200" />
+
+  <label>Massa de agregados (g)</label>
+  <input id="agregado" placeholder="Ex: 1130" />
+
+  <p><b>Pb (%) será calculado automaticamente</b></p>
+
+  <button id="btnSalvar">Salvar Ensaio</button>
+</div>
 
 </section>
     </section>
