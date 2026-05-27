@@ -500,21 +500,19 @@ function refreshEnsaiosList() {
 setConn("Online (Firestore)", true);
 if (e_data && !e_data.value) e_data.value = todayISO();
 loadActiveProjectOnce().then(refreshActiveProject).catch(()=>{});
-// ---------- TESTE ENSAIO SIMPLES ----------
-const btnTeste = document.querySelector("#view-ensaios button");
 
-if (btnTeste) {
-  btnTeste.addEventListener("click", async () => {
+// ---------- ENSAIO REAL ----------// ---------- ENSconst btnSalvar = document.querySelector("#view-ensaios button");
+
+if (btnSalvar) {
+  btnSalvar.addEventListener("click", async () => {
+
+    const data = document.getElementById("data")?.value;
+    const tecnico = document.getElementById("tecnico")?.value;
+    const lote = document.getElementById("lote")?.value;
+    const massa = document.getElementById("massa")?.value;
+
     try {
-      await addDoc(collection(db, "teste_ensaios"), {
-        data: new Date().toISOString(),
-        info: "teste simples",
-      });
+      await addDoc(collection(db, "ensaios"), {
+        data: data || "",
 
-      alert("Ensaio salvo com sucesso!");
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao salvar");
-    }
-  });
-}
+
