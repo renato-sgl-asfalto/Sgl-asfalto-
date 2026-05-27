@@ -1,8 +1,6 @@
 :root{
   --bg:#0b0f14;
-  --card:#101824;
-  --txt:#e8eef6;
-  --muted:#9bb0c7;
+7;  --card:#101824;
   --line:#1c2a3d;
   --btn:#f2c14e;
   --btnTxt:#1a1405;
@@ -108,3 +106,13 @@ button:active{transform:translateY(1px)}
 .badge.ok{border-color:rgba(57,217,138,.5); color:var(--ok);}
 .badge.bad{border-color:rgba(255,92,92,.5); color:var(--bad);}
 .badge.warn{border-color:rgba(255,209,102,.5); color:var(--warn);}
+
+/* subtabs */
+.subtabs{display:flex;gap:8px;flex-wrap:wrap}
+.subtab{
+  background:#0c1420;border:1px solid var(--line);color:var(--txt);
+  padding:7px 10px;border-radius:12px;cursor:pointer;font-weight:1000;font-size:12px;
+}
+.subtab.active{background:#132033;border-color:rgba(255,209,102,.35);color:var(--warn);}
+.subview.hidden{display:none}
+  --txt:#e8eef6;
