@@ -111,6 +111,7 @@ const p_nome = document.getElementById("p_nome");
 const p_codigo = document.getElementById("p_codigo");
 const p_cliente = document.getElementById("p_cliente");
 const p_pb = document.getElementById("p_pb");
+const p_pbtol = document.getElementById("p_pbtol");
 const p_mistura = document.getElementById("p_mistura");
 const p_cap = document.getElementById("p_cap");
 // ---------- BOTÃO ENSAIO (CORRETO) ----------
@@ -196,6 +197,7 @@ if (btnSalvarProjeto) {
       cap: p_cap.value.trim() || null,
       sieveLimits: readSieveLimits(sieveBody),
       createdAt: serverTimestamp()
+      pbTol: nOrNull(p_pbtol?.value) ?? 0.3,
     };
     try {
       await addDoc(projectsCol, data);
