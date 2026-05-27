@@ -83,6 +83,7 @@ button:active{transform:translateY(1px)}
 .item b{font-size:13px}
 .item .meta{color:var(--muted);font-size:12px;margin-top:4px}
 .item .btns{display:flex;gap:8px}
+
 .btn2{
   background:#132033;border:1px solid var(--line);color:var(--txt);
   padding:8px 10px;border-radius:12px;font-weight:800;cursor:pointer;font-size:12px;
@@ -94,4 +95,14 @@ button:active{transform:translateY(1px)}
 .kpi{border:1px solid var(--line);border-radius:14px;background:#0c1420;padding:12px}
 .kpiTitle{color:var(--muted);font-size:12px;font-weight:800}
 .kpiValue{font-size:20px;font-weight:900;margin-top:6px}
-``
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
+  font-weight:900;
+}
+.badge.ok{border-color:rgba(57,217,138,.5); color:var(--ok);}
+.badge.bad{border-color:rgba(255,92,92,.5); color:var(--bad);}
