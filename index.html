@@ -1,7 +1,38 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset=" <h2>Painel</h2>  <meta charset="utf-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SGLAA – Laboratório de Asfalto</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">SGLAA</div>
+      <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto • Online</div>
+    </div>
+    <div class="right">
+      <div class="pill" id="connPill">Conectando…</div>
+      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="painel">Painel</button>
+    <button class="tab" data-tab="projetos">Projetos</button>
+    <button class="tab" data-tab="ensaios">Ensaios</button>
+    <button class="tab" data-tab="estatistico">Controle Estatístico</button>
+    <button class="tab" data-tab="relatorios">Relatórios</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- PAINEL -->
+    <section class="view" id="view-painel">
+      <div class="card">
+        <h2>Painel</h2>
         <p class="muted">Resumo do projeto ativo e indicadores.</p>
 
         <div class="grid2">
@@ -33,7 +64,8 @@
       <div class="card">
         <h2>Projetos (Dosagens)</h2>
         <p class="muted">
-          Cadastre Pb ± tolerância, densidade do CAP (para VAM/RBV) e faixa granulométrica (mín/máx). Depois clique em <b>Ativar</b>.
+          Cadastre Pb ± tolerância, densidade do CAP (para volumétricos) e faixa granulométrica (mín/máx).
+          Depois clique em <b>Ativar</b>.
         </p>
 
         <div class="grid2">
@@ -47,7 +79,7 @@
           <div><label>Tolerância Pb (± %)</label><input id="p_pbtol" placeholder="Ex: 0,30" /></div>
 
           <div><label>Densidade do CAP (g/cm³)</label><input id="p_gb" placeholder="Ex: 1,005" /></div>
-          <div class="muted">Se deixar vazio: 1,005.</div>
+          <div class="muted">Se deixar vazio, usa 1,005.</div>
         </div>
 
         <div class="hr"></div>
@@ -109,7 +141,7 @@
         <!-- EXTRAÇÃO + GRANU -->
         <div class="subview" id="sub-extrgranu">
           <p class="muted">
-            Pb: Mcom e Msem. Granulometria em cima de Msem. Como você lava na #200 e não pesa fundo, o “diferença” é o % passante #200 (lavado). 【2-9f2f16】【3-c4c41d】
+            Pb: Mcom/Msem. Granulometria sobre Msem. Lavagem #200: o “que some” é o % Passante #200 (lavado). 【4-4b02d5】【2-105b5d】
           </p>
 
           <div class="grid2">
@@ -135,7 +167,7 @@
             <div class="kpi">
               <div class="kpiTitle">% Passante #200 (lavado)</div>
               <div class="kpiValue" id="e_p200">—</div>
-              <div class="muted">100 − (Σretidos/#200 ÷ Msem)×100</div>
+              <div class="muted">100 − (Σretidos ÷ Msem)×100</div>
             </div>
 
             <div class="kpi">
@@ -274,7 +306,6 @@
     <section class="view hidden" id="view-estatistico">
       <div class="card">
         <h2>Controle Estatístico</h2>
-        <p class="muted">Resumo por período (busca e filtra no navegador, sem exigir índice do Firestore).</p>
         <div class="grid2">
           <div><label>Data inicial</label><input type="date" id="c_ini" /></div>
           <div><label>Data final</label><input type="date" id="c_fim" /></div>
@@ -300,7 +331,6 @@
     <section class="view hidden" id="view-relatorios">
       <div class="card">
         <h2>Relatórios</h2>
-        <p class="muted">Gera relatório do período e abre a impressão (salvar PDF no navegador).</p>
         <div class="grid2">
           <div><label>Data inicial</label><input type="date" id="rel_ini" /></div>
           <div><label>Data final</label><input type="date" id="rel_fim" /></div>
@@ -316,33 +346,3 @@
   <script type="module" src="./app.js"></script>
 </body>
 </html>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SGLAA – Laboratório de Asfalto</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-
-<body>
-  <header class="top">
-    <div class="brand">
-      <div class="logo">SGLAA</div>
-      <div class="sub">Sistema de Gerenciamento Laboratorial de Asfalto • Online</div>
-    </div>
-    <div class="right">
-      <div class="pill" id="connPill">Conectando…</div>
-      <div class="pill warn" id="activeProjPill">Projeto ativo: (carregando)</div>
-    </div>
-  </header>
-
-  <nav class="tabs">
-    <button class="tab active" data-tab="painel">Painel</button>
-    <button class="tab" data-tab="projetos">Projetos</button>
-    <button class="tab" data-tab="ensaios">Ensaios</button>
-    <button class="tab" data-tab="estatistico">Controle Estatístico</button>
-    <button class="tab" data-tab="relatorios">Relatórios</button>
-  </nav>
-
-  <main class="main">
-
-    <!-- PAINEL -->
-    <section class="view" id="view-painel">
-      <div class="card">
